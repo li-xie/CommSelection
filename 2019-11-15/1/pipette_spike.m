@@ -4,7 +4,7 @@
 % dil_factor: dilution factor
 % rep_counter: current number of Newborn communities.
 % parentnum: the rank of the Adult community
-function comm_rep = pipette(comm_selected, comm_struct, const_struct, dil_factor, rep_counter, parentnum)
+function comm_rep = pipette_spike(comm_selected, comm_struct, const_struct, dil_factor, spike_frac, BM_target, rep_counter, parentnum)
 % maximal number of offspring community from one Adult
 comm_rep_num = const_struct.comm_rep_num;
 % minimal number of Adults allowed to reproduce
@@ -20,7 +20,8 @@ H_L = comm_selected.H_L;
 fp = comm_selected.fp;
 M_counter = nnz(comm_selected.M_L);
 H_counter = nnz(comm_selected.H_L);
-
+dil_factor = floor(dil_factor/(1 - spike_frac));
+H_spike = round(BM_target*spike_frac/H_L(1));
 % assign a random number between 1 and dil_factor to each cell
 rand_temp = ceil(rand(M_counter + H_counter,1)*dil_factor);
 % if the Adult can generate more Newborns than comm_rep_num, keep only
@@ -39,7 +40,10 @@ if dil_factor >= comm_rep_num
         end
         if H_num>=1
             comm_rep(i).H_L(1:H_num) = H_L(temp_idx(1+M_num : H_num + M_num)-M_counter);
+            comm_rep(i).H_L(1+H_num : H_spike+H_num) = H_L(1);
         end
+        % supplement with H cells with identical biomass
+        
         comm_rep(i).parentnum = parentnum;
     end
     % keep only a total of comm_type_num*comm_rep_num Newborns
@@ -58,6 +62,7 @@ else
         end
         if H_num >= 1
             comm_rep(i).H_L(1:H_num)=H_L(temp_idx(1+M_num:H_num+M_num)-M_counter);
+            comm_rep(i).H_L(1+H_num : H_spike+H_num) = H_L(1);
         end
         comm_rep(i).parentnum = parentnum;
     end
