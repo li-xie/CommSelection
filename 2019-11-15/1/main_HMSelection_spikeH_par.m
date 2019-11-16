@@ -1,7 +1,7 @@
 clear
 
 
-C = 2; % total number of cycles
+C = 1e3; % total number of cycles
 % Maturation time, T0 = 20 for long T
 T0 = 17;
 % minimal number of Adults allowed to reproduce. comm_type_num = 1 for the
@@ -21,7 +21,7 @@ mut_rate = 1e-2;
 % @cell_sort: reproduce through cell-sorting, so that
 %            the biomass in the Newborns are fixed BM(0)=BM_target and
 %            phi_M(0)=phi_M(T) of the parent Adults
-repro_method = @pipette;
+repro_method = @pipette_spike;
 
 N = 100; % number of communities within a cycle
 % comm_type_num * comm_rep_num = number of communities within one cycle.
@@ -30,6 +30,7 @@ max_popul = 1e4; % maximal number of cells in the community
 t_bin = 0.05; % time step in the simulation
 pcs=1e-15; % precision constant
 t_binnum = int16(T0/t_bin); % number of time steps
+spike_frac = 0.5; % fraction of H pure culture spiked in
 
 % BM_target is the target biomass, T0 is the maturation time
 BM_target = 100;
@@ -51,7 +52,7 @@ K_MB = 100/3;
 fp_max = 1; % fp is between 0 and 1
 
 % initialize for the first cycle
-M0=60; % number of M cells in a Newborn
+M0=30; % number of M cells in a Newborn
 H0=BM_target-M0; % number of H cells in a Newborn
 
 % structure for communities
@@ -239,13 +240,13 @@ for n = 1 : C
         if rep_counter >= comm_type_num*comm_rep_num
             break
         end
-        dil_factor = floor((comm_all_sorted(i).M_t(t_binnum+1)+comm_all_sorted(i).H_t(t_binnum+1))/BM_target);
+        dil_factor = floor((comm_all_sorted(i).M_t(t_binnum+1)+comm_all_sorted(i).H_t(t_binnum+1))/BM_target/(1-spike_frac));
         if dil_factor == 0
             continue
         end
         rep_num_temp = min(dil_factor,comm_rep_num);
         comm_all_idx = min(comm_type_num*comm_rep_num,rep_counter+rep_num_temp);
-        comm_all(rep_counter+1:comm_all_idx) = repro_method(comm_all_sorted(i), comm_struct, const_struct, dil_factor, rep_counter, i);
+        comm_all(rep_counter+1:comm_all_idx) = repro_method(comm_all_sorted(i), comm_struct, const_struct, dil_factor, BM_target*spike_frac, rep_counter, i);
         sel_counter = sel_counter+1;
         comm_selected(sel_counter) = comm_all_sorted(i);
         rep_counter = rep_counter+rep_num_temp;
