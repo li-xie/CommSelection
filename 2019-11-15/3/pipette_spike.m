@@ -10,6 +10,7 @@ comm_rep_num = const_struct.comm_rep_num;
 % minimal number of Adults allowed to reproduce
 comm_type_num = const_struct.comm_type_num;
 
+
 % comm_struct=struct('M_L',zeros(max_popul,1),'H_L',zeros(max_popul,1),'fp',zeros(max_popul,1),...
 %     'M_t',zeros(t_binnum,1),'H_t',zeros(t_binnum,1),'R',zeros(t_binnum,1),'B',zeros(t_binnum,1),...
 %     'P',0,'parentnum',0,'rseed',uint32(0));
@@ -20,7 +21,8 @@ H_L = comm_selected.H_L;
 fp = comm_selected.fp;
 M_counter = nnz(comm_selected.M_L);
 H_counter = nnz(comm_selected.H_L);
-H_spike = round(H_Biomass_spike/H_L(1));
+H_spike_mean = H_Biomass_spike/H_L(1);
+H_spike = round(normrnd(H_spike_mean, sqrt(H_spike_mean), [dil_factor,1]));
 % assign a random number between 1 and dil_factor to each cell
 rand_temp = ceil(rand(M_counter + H_counter,1)*dil_factor);
 % if the Adult can generate more Newborns than comm_rep_num, keep only
@@ -39,7 +41,7 @@ if dil_factor >= comm_rep_num
         end
         if H_num>=1
             comm_rep(i).H_L(1:H_num) = H_L(temp_idx(1+M_num : H_num + M_num)-M_counter);
-            comm_rep(i).H_L(1+H_num : H_spike+H_num) = H_L(1);
+            comm_rep(i).H_L(1+H_num : H_spike(i)+H_num) = H_L(1);
         end
         % supplement with H cells with identical biomass
         
@@ -61,7 +63,7 @@ else
         end
         if H_num >= 1
             comm_rep(i).H_L(1:H_num)=H_L(temp_idx(1+M_num:H_num+M_num)-M_counter);
-            comm_rep(i).H_L(1+H_num : H_spike+H_num) = H_L(1);
+            comm_rep(i).H_L(1+H_num : H_spike(i)+H_num) = H_L(1);
         end
         comm_rep(i).parentnum = parentnum;
     end
