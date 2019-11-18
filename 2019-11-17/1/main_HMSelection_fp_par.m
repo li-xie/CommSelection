@@ -1,12 +1,12 @@
 clear
 
 
-C = 2; % total number of cycles
+C = 2e3; % total number of cycles
 % Maturation time, T0 = 20 for long T
 T0 = 17;
 % minimal number of Adults allowed to reproduce. comm_type_num = 1 for the
 % top-dog strategy, comm_type_num = n for the top n% strategy.
-comm_type_num = 1; 
+comm_type_num = 10; 
 % mut_rate = 1e-2 corresponding to effective mutation rate of 2e-3,
 % mut_rate = 1e-4 corresponding to effective mutation rate of 2e-5, as in
 % Fig S18
@@ -21,7 +21,7 @@ mut_rate = 1e-2;
 % @cell_sort: reproduce through cell-sorting, so that
 %            the biomass in the Newborns are fixed BM(0)=BM_target and
 %            phi_M(0)=phi_M(T) of the parent Adults
-repro_method = @pipette;
+repro_method = @fixBM0;
 
 N = 100; % number of communities within a cycle
 % comm_type_num * comm_rep_num = number of communities within one cycle.
