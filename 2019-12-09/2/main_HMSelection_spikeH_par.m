@@ -21,7 +21,7 @@ max_popul = 1e4; % maximal number of cells in the community
 t_bin = 0.05; % time step in the simulation
 pcs=1e-15; % precision constant
 t_binnum = int16(T0/t_bin); % number of time steps
-spike_frac = 0; % fraction of H pure culture spiked in
+spike_frac = 0.3; % fraction of H pure culture spiked in
 
 % BM_target is the target biomass, T0 is the maturation time
 BM_target = 100;
