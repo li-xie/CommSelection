@@ -1,7 +1,7 @@
 clear
 
 spike_frac = 0.3;
-n = 549;
+% n = 549;
 comm_type_num = 1;
 mut_rate = 1e-2;
 
@@ -47,8 +47,9 @@ comm_struct=struct('M_L',zeros(max_popul,1),'H_L',zeros(max_popul,1),'fp',zeros(
 const_struct=struct('t_binnum',t_binnum,'max_popul',max_popul,'comm_rep_num',comm_rep_num,...
     'comm_type_num',comm_type_num,'pcs',pcs,'BM_target',BM_target);
 
-filename = ['C' num2str(n) '/comm_all/adults.mat'];
-load(filename);
+% filename = ['C' num2str(n) '/comm_all/adults.mat'];
+% load(filename);
+load('R1/adults.mat')
 if ~exist('Data','dir')
     mkdir('Data')
 end
