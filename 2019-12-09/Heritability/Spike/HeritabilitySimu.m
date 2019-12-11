@@ -1,6 +1,6 @@
 clear
 
-spike_frac = 0;
+spike_frac = 0.3;
 n = 549;
 comm_type_num = 1;
 mut_rate = 1e-2;
