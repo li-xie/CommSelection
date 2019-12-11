@@ -55,6 +55,7 @@ if ~exist('Data','dir')
 end
 rng('shuffle')
 distrng_m = randi(2^32-1,comm_type_num*comm_rep_num,1,'uint32');
+save('Data/distrng_m', 'distrng_m')
 for j = 1:100
     rep_counter = 0;
     % reproduce chosen Adult communities.
@@ -66,8 +67,8 @@ for j = 1:100
     end
     comm_all = fixBM0_spike(comm_selected, comm_struct, const_struct, dil_factor, BM_target*spike_frac, rep_counter, j);
     % assign random number seed to Newborns of the next cycle
-    rseed = randi(2^32-1,comm_type_num*comm_rep_num,1,'uint32');
-    for ri = 1 : dil_factor
+    rseed = randi(2^32-1, dil_factor,1,'uint32');
+    for ri = 1 : dil_factor 
         comm_all(ri).rseed = rseed(ri);
     end
     newborns = comm_all;
