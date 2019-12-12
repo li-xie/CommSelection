@@ -1,7 +1,7 @@
 clear
 
 
-C = 2e3; % total number of cycles
+C = 1e3; % total number of cycles
 % Maturation time, T0 = 20 for long T
 T0 = 17;
 % minimal number of Adults allowed to reproduce. comm_type_num = 1 for the
@@ -11,7 +11,7 @@ comm_type_num = 2;
 % mut_rate = 1e-4 corresponding to effective mutation rate of 2e-5, as in
 % Fig S18
 mut_rate = 1e-2;
-Pn_sig=40; % std of the noise 40 correpondes to 5% and 80 corresponds to 10%
+Pn_sig = 40; % std of the noise 40 correpondes to 5% and 80 corresponds to 10%
 % reproducing method
 repro_method = @fixBM0_spike;
 
@@ -22,7 +22,7 @@ max_popul = 1e4; % maximal number of cells in the community
 t_bin = 0.05; % time step in the simulation
 pcs=1e-15; % precision constant
 t_binnum = int16(T0/t_bin); % number of time steps
-spike_frac = 0.3; % fraction of H pure culture spiked in
+spike_frac = 0; % fraction of H pure culture spiked in
 
 % BM_target is the target biomass, T0 is the maturation time
 BM_target = 100;
