@@ -28,7 +28,7 @@ T0 = 17;
 % para = [gM_max; gH_max; c_BM; c_RM; c_RH; fp; K_MR; K_HR; K_MB; dM; dH];
 % options=odeset('RelTol',1e-6,'abstol',1e-10);
 
-N = 100; % number of communities within a cycle
+N = 1000; % number of communities within a cycle
 % comm_type_num * comm_rep_num = number of communities within one cycle.
 comm_rep_num = N/comm_type_num; % maximal number of offspring community from one Adult.
 max_popul = 1e4; % maximal number of cells in the community
