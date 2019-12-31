@@ -1,5 +1,5 @@
 % clear
-check_cycle = 300;
+check_cycle = 1700;
 load(['C' num2str(check_cycle-1) '/ParResults'])
 load(['C' num2str(check_cycle) '/OffResults'])
 load(['C' num2str(check_cycle-1) '/comm_all/P_all'])

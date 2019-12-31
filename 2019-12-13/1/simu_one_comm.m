@@ -1,7 +1,6 @@
 function comm_rep = simu_one_comm(newborn, comm_struct, const_struct)
 rnodeseed = newborn.rseed;
 rng(rnodeseed, 'twister');
-comm_rep = comm_struct;
 t_binnum = const_struct.t_binnum;
 max_popul = const_struct.max_popul;
 pcs = const_struct.pcs;
@@ -67,7 +66,7 @@ for dt = 2 : t_binnum+1
         'K_HR',K_HR(1:H_counter));
     fhandle=@(t,y) chem_conc_jacobian_SP(t, y , paras);
     options=odeset('Jacobian',fhandle,'RelTol',1e-5);
-    [tx,y]=ode23s(@(t,y) chem_conc_SP(t, y, paras), [0 t_bin], [B(dt-1); R(dt-1)], options);
+    [tx,y]=ode23s(@(t,y) chem_conc_SP(t, y, paras), (0:1e-2:t_bin), [B(dt-1); R(dt-1)], options);
     if ~isreal(y)
         error('imaginary value')
     end
@@ -78,9 +77,11 @@ for dt = 2 : t_binnum+1
     M_coef = BN_mat./(RN_M_mat+BN_mat).*RN_M_mat./(RN_M_mat+1) ...
         + RN_M_mat./(RN_M_mat+BN_mat).*BN_mat./(BN_mat+1);
     gMdt = trapz(tx, M_coef, 2) .* gM_max(1:M_counter) .* (1 - fp(1:M_counter));
+    clear M_coef
     RN_H_mat = (1./K_HR(1:H_counter)) * y(:,2)';
     H_coef = RN_H_mat ./(RN_H_mat+1);
     gHdt = trapz(tx, H_coef, 2) .* gH_max(1:H_counter);
+    clear H_coef
     
     M_LTemp(1:M_counter) = exp(gMdt) .* M_L((1:M_counter));
     H_LTemp(1:H_counter)=exp(gHdt) .* H_L(1:H_counter);
@@ -175,6 +176,8 @@ temp2 = find((gH_max > pcs) & (K_HR < K_singular));
 M_t(end) = sum(M_L(temp1));
 H_t(end) = sum(H_L(temp2));
 M_counter = length(temp1);
+
+comm_rep = comm_struct;
 comm_rep.M_L(1:M_counter) = M_L(temp1);
 H_counter = length(temp2);
 comm_rep.H_L(1:H_counter) = H_L(temp2);

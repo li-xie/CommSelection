@@ -1,7 +1,7 @@
 clear
 
-C_prev = 435;
-C = 500; % total number of cycles
+C_prev = 1512;
+C = 1700; % total number of cycles
 check_cycle = C;
 test_rep_num = 3;
 spike_frac = 0; % fraction of H pure culture spiked in
@@ -121,7 +121,7 @@ else
 end
 
 
-for n = C_prev+1 : 436
+for n = C_prev+1 : C
     % create a folder Cn to save the results of the nth cycle
     folder_name1 = ['C' num2str(n)];
     if ~exist(folder_name1, 'dir')
