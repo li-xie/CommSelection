@@ -9,6 +9,7 @@
 % rep_num_M: specify the number of Newborns for each spike fraction 
 function comm_rep = pipette_SpikeTest_SP(comm_selected, newborn_struct, ...
     const_struct, spike_frac_M, rep_num_M, parentnum)
+comm_rep_num = const_struct.comm_rep_num;
 
 comm_rep(1,1:sum(rep_num_M)) = newborn_struct;
 gH_max_start = const_struct.gH_max_start;
@@ -39,14 +40,17 @@ all_gMax_rand = all_gMax(rand_idx);
 all_KR_rand = all_KR(rand_idx);
 all_KB_rand = all_KB(rand_idx);
 
-num_cells = zeros(sum(rep_num_M), 1);
-H_spike = zeros(sum(rep_num_M), 1);
-temp_counter = 0;
 if ~isempty(spike_frac_M)
+    % calculate the number of cells into each Newborn if the Adult is
+    % exhausted
+    p_temp = ones(rep_num_M(end), 1) * (BM_target*(1-spike_frac_M(2:end))/BM);
+    mn_p = [BM_target/BM*ones(1,comm_rep_num), transpose(p_temp(:))];
+    mn_p = [mn_p, 1-sum(mn_p)];
+    num_cells_all = mnrnd(M_counter + H_counter, mn_p);
+    num_cells = num_cells_all(1:end-1);
+    H_spike = zeros(sum(rep_num_M), 1);
+    temp_counter = 0;
     for s = 1:length(spike_frac_M)
-        num_cells(temp_counter+1:temp_counter+rep_num_M(s)) ...
-            = binornd(M_counter + H_counter, ...
-            BM_target*(1-spike_frac_M(s))/BM, [rep_num_M(s), 1]);
         % assume that the biomass of spiked H cells are 1/log(2)
         H_spike(temp_counter+1:temp_counter+rep_num_M(s)) ...
             = poissrnd(round(BM_target*spike_frac_M(s)*log(2)), [rep_num_M(s), 1]);
