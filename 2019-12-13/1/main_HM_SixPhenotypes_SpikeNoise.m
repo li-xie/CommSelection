@@ -1,23 +1,29 @@
 clear
 
-C = 2; % total number of cycles
+C_prev = 435;
+C = 500; % total number of cycles
+check_cycle = C;
+test_rep_num = 3;
+spike_frac = 0; % fraction of H pure culture spiked in
+spike_test = [0.35 0.7];
 % upper bound for gH_max. for gH_max_Bound = 0.3, set V = 1.
 gH_max_Bound = 0.8;
 % the factor for amount of R(0)
 V = 10;
 % minimal number of Adults allowed to reproduce. comm_type_num = 1 for the
 % top-dog strategy, comm_type_num = n for the top n% strategy.
-comm_type_num = 1; 
+comm_type_num = 10;
 % mutation rate corresponding to effective mutation rate of 2e-3
 % to turn off the mutation, set mut_rate=0.
 mut_rate = 1e-2; % mutation rate corresponding to effective mutation rate of 2e-3
+Pn_sig = 100; % std of the noise 40 correpondes to 5% and 80 corresponds to 10%
 % reproducing method
 % @pipette_SP: reproduce through pipetting, allowing both BM(0) and
 %          phi_M(0) to fluctuate
 % @cell_sort_SP: reproduce through cell-sorting, so that
 %            the biomass in the Newborns are fixed BM(0)=BM_target and
 %            phi_M(0)=phi_M(T) of the parent Adults
-repro_method = @cell_sort_SP;
+repro_method = @pipette_spike_SP;
 
 N = 100; % number of communities within a cycle
 % BM_target is the target biomass, T0 is the maturation time
@@ -26,6 +32,7 @@ T0 = 17;
 % comm_type_num * comm_rep_num = number of communities within one cycle.
 comm_rep_num = N/comm_type_num; % maximal number of offspring community from one Adult.
 max_popul = 1e4*V; % maximal number of cells in the community
+nb_popul = BM_target*2;
 t_bin = 0.05; % time step in the simulation
 pcs=1e-15; % precision constant
 t_binnum = int16(T0/t_bin); % number of time steps
@@ -64,44 +71,57 @@ comm_struct=struct('M_L',zeros(max_popul,1),'H_L',zeros(max_popul,1),'fp',zeros(
     'gH_max', zeros(max_popul,1), 'K_HR', zeros(max_popul,1),...
     'M_t',zeros(t_binnum+1,1),'H_t',zeros(t_binnum+1,1),'R',zeros(t_binnum+1,1),'B',zeros(t_binnum+1,1),...
     'P',0,'parentnum',0,'rseed',uint32(0));
-
-const_struct=struct('t_binnum',t_binnum,'max_popul',max_popul,'comm_rep_num',comm_rep_num,...
-    'comm_type_num',comm_type_num,'pcs',pcs,'BM_target',BM_target);
-
-fp_init = zeros(max_popul, 1);
-gM_max_init = zeros(max_popul, 1);
-K_MB_init = zeros(max_popul, 1);
-K_MR_init = zeros(max_popul, 1);
-gH_max_init = zeros(max_popul, 1);
-M_L_init = zeros(max_popul, 1);
-K_HR_init = zeros(max_popul, 1);
-H_L_init=zeros(max_popul, 1);
-% death_probability=zeros(max_popul,1);
-M_counter = 60 ;
-H_counter = BM_target - M_counter;
-M_L_init(1 : M_counter) = 1;
-H_L_init(1 : H_counter) = 1;
-fp_init(1 : M_counter) = fp_start;
-gM_max_init(1 : M_counter) = gM_max_start;
-K_MB_init(1 : M_counter) = K_MB_start;
-K_MR_init(1 : M_counter) = K_MR_start;
-gH_max_init(1 : H_counter)=gH_max_start;
-K_HR_init(1 : H_counter) = K_HR_start;
-
-
-comm_all(1 : comm_type_num*comm_rep_num,1)...
-    =struct('M_L', M_L_init,'H_L', H_L_init,'fp', fp_init,...
-    'gM_max', gM_max_init, 'K_MB', K_MB_init, 'K_MR', K_MR_init,...
-    'gH_max', gH_max_init, 'K_HR', K_HR_init,...
+newborn_struct = struct('M_L',zeros(nb_popul,1),'H_L',zeros(nb_popul,1),'fp',zeros(nb_popul,1),...
+    'gM_max', zeros(nb_popul,1), 'K_MB', zeros(nb_popul,1), 'K_MR', zeros(nb_popul,1),...
+    'gH_max', zeros(nb_popul,1), 'K_HR', zeros(nb_popul,1),...
     'M_t',zeros(t_binnum+1,1),'H_t',zeros(t_binnum+1,1),'R',zeros(t_binnum+1,1),'B',zeros(t_binnum+1,1),...
     'P',0,'parentnum',0,'rseed',uint32(0));
-rseed=randi(2^32-1,comm_type_num*comm_rep_num,1,'uint32');
-for ri=1:comm_type_num*comm_rep_num
-    comm_all(ri).rseed=rseed(ri);
+
+const_struct=struct('t_binnum',t_binnum,'max_popul',max_popul,'comm_rep_num',comm_rep_num,...
+    'comm_type_num',comm_type_num,'pcs',pcs,'BM_target',BM_target, ...
+    'gH_max_start', gH_max_start, 'K_HR_start', K_HR_start, 't_bin', t_bin,...
+    'gM_max_Bound', gM_max_Bound, 'gH_max_Bound', gH_max_Bound,...
+    'fp_Bound', fp_Bound, 'K_MB_Bound', K_MB_Bound,'K_MR_Bound', K_MR_Bound, ...
+    'K_HR_Bound', K_HR_Bound, 'R0', R0, 'K_singular', K_singular, 'dM', dM, 'dH', dH, ...
+    'c_BM', c_BM, 'c_RM', c_RM, 'c_RH', c_RH, 'mut_rate', mut_rate);
+
+if C_prev > 0
+    load('comm_all/newborns')
+else
+    fp_init = zeros(nb_popul, 1);
+    gM_max_init = zeros(nb_popul, 1);
+    K_MB_init = zeros(nb_popul, 1);
+    K_MR_init = zeros(nb_popul, 1);
+    gH_max_init = zeros(nb_popul, 1);
+    M_L_init = zeros(nb_popul, 1);
+    K_HR_init = zeros(nb_popul, 1);
+    H_L_init=zeros(nb_popul, 1);
+    % death_probability=zeros(max_popul,1);
+    M_counter = 60 ;
+    H_counter = BM_target - M_counter;
+    M_L_init(1 : M_counter) = 1;
+    H_L_init(1 : H_counter) = 1;
+    fp_init(1 : M_counter) = fp_start;
+    gM_max_init(1 : M_counter) = gM_max_start;
+    K_MB_init(1 : M_counter) = K_MB_start;
+    K_MR_init(1 : M_counter) = K_MR_start;
+    gH_max_init(1 : H_counter)=gH_max_start;
+    K_HR_init(1 : H_counter) = K_HR_start;
+    
+    newborns(1, N)...
+        =struct('M_L', M_L_init,'H_L', H_L_init,'fp', fp_init,...
+        'gM_max', gM_max_init, 'K_MB', K_MB_init, 'K_MR', K_MR_init,...
+        'gH_max', gH_max_init, 'K_HR', K_HR_init,...
+        'M_t',zeros(t_binnum+1,1),'H_t',zeros(t_binnum+1,1),'R',zeros(t_binnum+1,1),'B',zeros(t_binnum+1,1),...
+        'P',0,'parentnum',0,'rseed',uint32(0));
+    rseed=randi(2^32-1,N,1,'uint32');
+    for ri=1:N
+        newborns(ri).rseed=rseed(ri);
+    end
 end
 
 
-for n = 1 : C
+for n = C_prev+1 : 436
     % create a folder Cn to save the results of the nth cycle
     folder_name1 = ['C' num2str(n)];
     if ~exist(folder_name1, 'dir')
@@ -111,210 +131,128 @@ for n = 1 : C
     if ~exist(folder_name2, 'dir')
         mkdir(folder_name2)
     end
-    newborns = newborn_trim(comm_all, BM_target, pcs);
     save([folder_name2 '/newborns'],'newborns');
+    comm_all(1,1:N) = comm_struct;
     % rep is the index of communities within one cycle
-    parfor rep = 1:comm_type_num*comm_rep_num
-        rnodeseed = comm_all(rep).rseed;
-        rng(rnodeseed, 'twister');
-        comm_rep = comm_struct;
-        % copy the data from the structure with Newborn's configuration
-        M_L = comm_all(rep).M_L;
-        H_L = comm_all(rep).H_L;
-        fp = comm_all(rep).fp;
-        gM_max = comm_all(rep).gM_max;
-        K_MB = comm_all(rep).K_MB;
-        K_MR = comm_all(rep).K_MR;
-        gH_max = comm_all(rep).gH_max;
-        K_HR = comm_all(rep).K_HR;
-        M_t = zeros(t_binnum+1, 1);
-        H_t = zeros(t_binnum+1, 1);
-        %  temporary column vectors for M and H's biomass
-        M_LTemp = zeros(max_popul,1);
-        H_LTemp = zeros(max_popul,1);
-        % column vectors to store B and R's concentrations at each time
-        % step
-        B = zeros(t_binnum+1, 1);
-        R = zeros(t_binnum+1, 1);
-        P = 0;
-        %         p0=sum(fp.*M_L./(1-fp));
-        M_counter = nnz(M_L>pcs);
-        H_counter = nnz(H_L>pcs);
-        M_t(1) = sum(M_L);
-        H_t(1) = sum(H_L);
-        R(1) = R0;
-        % perform simulation through t_binnum time steps
-        for dt = 2 : t_binnum+1
-            gM_maxM_L = gM_max(1:M_counter) .* M_L(1:M_counter);
-            gH_maxH_L = gH_max(1:H_counter) .* H_L(1:H_counter);
-            paras=struct('gM_maxM_L',gM_maxM_L,'gH_maxH_L',gH_maxH_L,...
-                'c_BM', c_BM, 'c_RM', c_RM, 'c_RH', c_RH,...
-                'K_MB', K_MB(1:M_counter),'K_MR',K_MR(1:M_counter),...
-                'K_HR',K_HR(1:H_counter));
-            fhandle=@(t,y) chem_conc_jacobian_SP(t, y , paras);
-            options=odeset('Jacobian',fhandle,'RelTol',1e-5);
-            [tx,y]=ode23s(@(t,y) chem_conc_SP(t, y, paras), [0 t_bin], [B(dt-1); R(dt-1)], options);
-            if ~isreal(y)
-                error('imaginary value')
-            end
-            % matrice where the row number is the number of cells and colomn
-            % number is the B(t) and R(t) within the time step
-            BN_mat = (1./K_MB(1:M_counter)) * y(:,1)';
-            RN_M_mat = (1./K_MR(1:M_counter)) * y(:,2)';
-            M_coef = BN_mat./(RN_M_mat+BN_mat).*RN_M_mat./(RN_M_mat+1) ...
-                + RN_M_mat./(RN_M_mat+BN_mat).*BN_mat./(BN_mat+1);
-            gMdt = trapz(tx, M_coef, 2) .* gM_max(1:M_counter) .* (1 - fp(1:M_counter));
-            RN_H_mat = (1./K_HR(1:H_counter)) * y(:,2)';
-            H_coef = RN_H_mat ./(RN_H_mat+1);
-            gHdt = trapz(tx, H_coef, 2) .* gH_max(1:H_counter);
-            
-            M_LTemp(1:M_counter) = exp(gMdt) .* M_L((1:M_counter));
-            H_LTemp(1:H_counter)=exp(gHdt) .* H_L(1:H_counter);
-            P = sum(fp(1:M_counter) .* (M_LTemp(1:M_counter) - M_L(1:M_counter))...
-                ./(1-fp(1:M_counter)) ) + P;
-            M_L(1:M_counter) = M_LTemp(1:M_counter);
-            H_L(1:H_counter) = H_LTemp(1:H_counter);
-            B(dt) = y(end, 1);
-            R(dt) = y(end, 2);
-            
-            death_probability = rand(max_popul,1);
-            M_L(death_probability < dM * t_bin) = 0;
-            fp( death_probability < dM * t_bin) = 0;
-            gM_max( death_probability < dM * t_bin) = 0;
-            M_t(dt) = sum(M_L);
-            
-            death_probability = rand(max_popul,1);
-            H_L( death_probability < dH * t_bin) = 0;
-            gH_max( death_probability < dH * t_bin) = 0;
-            H_t(dt) = sum(H_L);
-            
-            div_idx = find(M_L >= 2);
-            div_length = length(div_idx);
-            if div_length > 0
-                mut_multiplier = mu_spec(div_length) .* double(rand(div_length,1) <= mut_rate) + 1;
-                fp(M_counter+1 : M_counter+div_length)...
-                    = fp(div_idx) .* mut_multiplier;
-                mut_multiplier = mu_spec(div_length) .* double(rand(div_length,1) <= mut_rate) + 1;
-                mut_multiplier = max(mut_multiplier, pcs);
-                K_MB(M_counter+1 : M_counter+div_length)...
-                    = K_MB(div_idx) ./mut_multiplier;
-                mut_multiplier = mu_spec(div_length) .* double(rand(div_length,1) <= mut_rate) + 1;
-                mut_multiplier = max(mut_multiplier, pcs);
-                K_MR(M_counter+1 : M_counter+div_length)...
-                    = K_MR(div_idx) ./mut_multiplier;
-                mut_multiplier = mu_spec(div_length) .* double(rand(div_length,1) <= mut_rate) + 1;
-                gM_max(M_counter+1 : M_counter+div_length)...
-                    =gM_max(div_idx) .* mut_multiplier;
-                
-                mut_multiplier = mu_spec(div_length) .* double(rand(div_length,1) <= mut_rate) + 1;
-                fp(div_idx) = fp(div_idx) .* mut_multiplier;
-                mut_multiplier = mu_spec(div_length) .* double(rand(div_length,1) <= mut_rate) + 1;
-                mut_multiplier = max(mut_multiplier, pcs);
-                K_MB(div_idx)=K_MB(div_idx) ./mut_multiplier;
-                mut_multiplier = mu_spec(div_length) .* double(rand(div_length,1) <= mut_rate) + 1;
-                mut_multiplier = max(mut_multiplier, pcs);
-                K_MR(div_idx)=K_MR(div_idx) ./mut_multiplier;
-                mut_multiplier = mu_spec(div_length) .* double(rand(div_length,1) <= mut_rate) + 1;
-                gM_max(div_idx)=gM_max(div_idx) .* mut_multiplier;
-                
-                M_L(M_counter+1:M_counter+div_length) = M_L(div_idx)/2;
-                M_L(div_idx) = M_L(div_idx)/2;
-                M_counter = M_counter + div_length;
-                
-                % if the phenotypes exceed the bounds, cap them at the bounds
-                fp(fp > fp_Bound) = fp_Bound;
-                K_MB((K_MB < K_MB_Bound)&(K_MB > pcs)) = K_MB_Bound;
-                K_MR((K_MR < K_MR_Bound)&(K_MR > pcs)) = K_MR_Bound;
-                gM_max(gM_max > gM_max_Bound) = gM_max_Bound;
-            end
-            
-            div_idx = find(H_L >= 2);
-            div_length = length(div_idx);
-            if div_length > 0
-                mut_multiplier = mu_spec(div_length) .* double(rand(div_length,1) <= mut_rate) + 1;
-                gH_max(H_counter+1 : H_counter+div_length)...
-                    =gH_max(div_idx) .* mut_multiplier;
-                mut_multiplier = mu_spec(div_length) .* double(rand(div_length,1) <= mut_rate) + 1;
-                mut_multiplier = max(mut_multiplier, pcs);
-                K_HR(H_counter+1 : H_counter+div_length)...
-                    = K_HR(div_idx) ./mut_multiplier;
-                
-                mut_multiplier = mu_spec(div_length) .* double(rand(div_length,1) <= mut_rate) + 1;
-                gH_max(div_idx) = gH_max(div_idx) .* mut_multiplier;
-                mut_multiplier = mu_spec(div_length) .* double(rand(div_length,1) <= mut_rate) + 1;
-                mut_multiplier = max(mut_multiplier, pcs);
-                K_HR(div_idx) = K_HR(div_idx) ./mut_multiplier;
-                
-                H_L(H_counter+1 : H_counter+div_length) = H_L(div_idx)/2;
-                H_L(div_idx) = H_L(div_idx)/2;
-                H_counter = H_counter + div_length;
-                
-                gH_max(gH_max > gH_max_Bound) = gH_max_Bound;
-                K_HR((K_HR < K_HR_Bound)&(K_HR > pcs)) = K_HR_Bound;
-            end
-            
-        end
-        % find the indice of the cells that are viable (positive growth 
-        % rates and K smaller than the singular value)
-        temp1 = find((gM_max > pcs) & (K_MB < K_singular) & (K_MR < K_singular));
-        temp2 = find((gH_max > pcs) & (K_HR < K_singular));
-        M_t(end) = sum(M_L(temp1));
-        H_t(end) = sum(H_L(temp2));
-        M_counter = length(temp1);
-        comm_rep.M_L(1:M_counter) = M_L(temp1);
-        H_counter = length(temp2);
-        comm_rep.H_L(1:H_counter) = H_L(temp2);
-        
-        comm_rep.fp(1:M_counter) = fp(temp1);
-        comm_rep.gM_max(1:M_counter) = gM_max(temp1);
-        comm_rep.K_MB(1:M_counter) = K_MB(temp1);
-        comm_rep.K_MR(1:M_counter) = K_MR(temp1);
-        comm_rep.gH_max(1:H_counter) = gH_max(temp2);
-        comm_rep.K_HR(1:H_counter) = K_HR(temp2);
-        
-        comm_rep.M_t = M_t;
-        comm_rep.H_t = H_t;
-        comm_rep.B = B;
-        comm_rep.R = R;
-        comm_rep.P = P;
-        comm_rep.parentnum = comm_all(rep).parentnum;
-        comm_rep.rseed = comm_all(rep).rseed;
-        
-        comm_all(rep)=comm_rep;
+    parfor rep = 1:N
+        %   for rep = 1:2
+        comm_all(rep) = simu_one_comm(newborns(rep), comm_struct, const_struct);
     end
+    %     if abs(C - check_cycle +2) < 0.1
+    %         adults = comm_all;
+    %         save([folder_name2 '/adults'],'adults');
+    %     end
     distrng=rng;
+    % add stochastic noise to the community function
+    Pn = normrnd(0, Pn_sig, size([comm_all.P]));
     P_all = [comm_all.P];
-    [~, I] = sort([comm_all.P], 'descend');
-    % I=randperm(comm_type_num*comm_rep_num);
+    [~, I] = sort([comm_all.P] + Pn, 'descend');
     comm_all_sorted = comm_all(I);
-    rep_counter = 0;
-    sel_counter = 0;
-    comm_selected(1 : comm_type_num*comm_rep_num,1) = comm_struct;
-    for i = 1 : comm_type_num*comm_rep_num
-        if rep_counter >= comm_type_num*comm_rep_num
-            break
+    % I=randperm(comm_type_num*comm_rep_num);
+    if abs(n - check_cycle + 2) < 0.1
+        comm_selected = comm_all_sorted(1:comm_type_num);
+        newborns_par(1:length(spike_test), 1:N) = newborn_struct;
+        rseed = randi(2^32-1, length(spike_test), N, 'uint32');
+        for i = 1:comm_type_num
+            comm_temp = pipette_SpikeTest_SP(comm_selected(i), newborn_struct, ...
+                const_struct, [spike_frac spike_test], comm_rep_num*[1 ones(size(spike_test))], i);
+            newborns((i-1)*comm_rep_num+1:i*comm_rep_num) ...
+                = comm_temp(1:comm_rep_num);
+            for j = 1:length(spike_test)
+                newborns_par(j, (i-1)*comm_rep_num+1:i*comm_rep_num) ...
+                    = comm_temp(j*comm_rep_num+1:(j+1)*comm_rep_num);
+            end
         end
-        dil_factor = floor((comm_all_sorted(i).M_t(t_binnum+1)+comm_all_sorted(i).H_t(t_binnum+1))/BM_target);
-        if dil_factor == 0
-            continue
+        for i = 1:length(spike_test)
+            for j = 1:N
+                newborns_par(i,j).rseed = rseed(i,j);
+            end
         end
-        rep_num_temp = min(dil_factor, comm_rep_num);
-        comm_all_idx = min(comm_type_num*comm_rep_num, rep_counter+rep_num_temp);
-        comm_all(rep_counter+1:comm_all_idx) = repro_method(comm_all_sorted(i), comm_struct, const_struct, dil_factor, rep_counter, i);
-        sel_counter=sel_counter+1;
-        comm_selected(sel_counter)=comm_all_sorted(i);
-        rep_counter=rep_counter+rep_num_temp;
+    elseif abs(n - check_cycle + 1) < 0.1
+        P_par = zeros(size(newborns_par));
+        M0_par = zeros(size(newborns_par));
+        H0_par = zeros(size(newborns_par));
+        adults_par(1:length(spike_test), 1:N) = comm_struct;
+        parfor i = 1:N*length(spike_test)
+            adults_par(i) = simu_one_comm(newborns_par(i), comm_struct, const_struct);
+            P_par(i) = adults_par(i).P;
+            M0_par(i) = adults_par(i).M_t(1);
+            H0_par(i) = adults_par(i).H_t(1);
+        end
+        save([folder_name1 '/ParResults'],'P_par','M0_par','H0_par')
+        newborns_off(1:test_rep_num*(length(spike_test) +1), 1:N) = newborn_struct;
+        rseed = randi(2^32-1,test_rep_num*(length(spike_test)+1), N, 'uint32');
+        comm_selected = comm_all_sorted(1:comm_type_num);
+        for i = 1:comm_type_num
+            comm_temp = pipette_SpikeTest_SP(comm_selected(i), newborn_struct, ...
+                const_struct, spike_frac, test_rep_num + comm_rep_num, i);
+            newborns((i-1)*comm_rep_num+1:i*comm_rep_num) ...
+                = comm_temp(1:comm_rep_num);
+            newborns_off(1 : test_rep_num, i) ...
+                = transpose(comm_temp(comm_rep_num+1:comm_rep_num+test_rep_num));
+        end
+        for i = comm_type_num+1:N
+            newborns_off(1 : test_rep_num, i) ...
+                = transpose(pipette_SpikeTest_SP(comm_all_sorted(i), newborn_struct, ...
+                const_struct, spike_frac, test_rep_num, i));
+        end
+        for i = 1:length(spike_test)
+            for j = 1:N
+                newborns_off(i*test_rep_num+1:(i+1)*test_rep_num, j) ...
+                    = transpose(pipette_SpikeTest_SP(adults_par(i,j), newborn_struct, ...
+                    const_struct, spike_test(i), test_rep_num, j));
+            end
+        end
+        for i = 1:test_rep_num * (length(spike_test)+1) * N
+            newborns_off(i).rseed = rseed(i);
+        end
+    elseif abs(n - check_cycle) < 0.1
+        P_off = zeros(size(newborns_off));
+        M0_off = zeros(size(newborns_off));
+        H0_off = zeros(size(newborns_off));
+        parfor i=1 : N*test_rep_num*(length(spike_test)+1)
+            comm_temp = simu_one_comm(newborns_off(i), comm_struct, const_struct);
+            P_off(i) = comm_temp.P;
+            M0_off(i) = comm_temp.M_t(1);
+            H0_off(i) = comm_temp.H_t(1);
+        end
+        save([folder_name1 '/OffResults'],'P_off','M0_off','H0_off')
+    else
+        rep_counter = 0;
+        sel_counter = 0;
+        comm_selected(1 : comm_type_num*comm_rep_num,1) = comm_struct;
+        for i = 1 : comm_type_num*comm_rep_num
+            if rep_counter >= comm_type_num*comm_rep_num
+                break
+            end
+            dil_factor = floor((comm_all_sorted(i).M_t(t_binnum+1)+comm_all_sorted(i).H_t(t_binnum+1))/BM_target/(1-spike_frac));
+            if dil_factor == 0
+                continue
+            end
+            rep_num_temp = min(dil_factor, comm_rep_num);
+            comm_all_idx = min(comm_type_num*comm_rep_num, rep_counter+rep_num_temp);
+            newborns(rep_counter+1:comm_all_idx) = pipette_SpikeTest_SP(comm_all_sorted(i), newborn_struct, ...
+                const_struct, spike_frac, N/comm_type_num, i);
+            sel_counter=sel_counter+1;
+            comm_selected(sel_counter)=comm_all_sorted(i);
+            rep_counter=rep_counter+rep_num_temp;
+        end
+        comm_selected=comm_selected(1:sel_counter);
     end
-    comm_selected=comm_selected(1:sel_counter);
-    
     % assign random number seed to Newborns of the next cycle
     rseed = randi(2^32-1,comm_type_num*comm_rep_num,1,'uint32');
     for ri = 1 : comm_type_num*comm_rep_num
-        comm_all(ri).rseed = rseed(ri);
+        newborns(ri).rseed = rseed(ri);
     end
-    % save the selected communities and the current state of the random number generator 
+    
+    % save the selected communities and the current state of the random number generator
     save([folder_name1 '/comm_selected'],'comm_selected');
     save([folder_name1 '/distrng'],'distrng');
-%     save([folder_name2 '/P_all'], 'P_all');
+    save([folder_name2 '/P_all'], 'P_all');
+    save([folder_name2 '/Pn'],'Pn');
 end
-
+% save Newborns of the (C+1)th cycle
+if ~exist('comm_all','dir')
+    mkdir('comm_all')
+end
+save('comm_all/newborns', 'newborns')
