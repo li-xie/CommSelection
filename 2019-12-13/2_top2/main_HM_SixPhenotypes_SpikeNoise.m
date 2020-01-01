@@ -1,7 +1,7 @@
 clear
 
-C_prev = 19;
-C = 22; % total number of cycles
+C_prev = 0;
+C = 20; % total number of cycles
 check_cycle = C;
 test_rep_num = 3;
 spike_frac = 0; % fraction of H pure culture spiked in
@@ -122,7 +122,7 @@ else
 end
 
 
-for n = C_prev+1 %: C
+for n = C_prev+1 : C
     % create a folder Cn to save the results of the nth cycle
     folder_name1 = ['C' num2str(n)];
     if ~exist(folder_name1, 'dir')
@@ -134,11 +134,11 @@ for n = C_prev+1 %: C
     end
     save([folder_name2 '/newborns'],'newborns');
     comm_all(1,1:N) = comm_struct;
-%     % rep is the index of communities within one cycle
-%     parfor rep = 1:N
-%         %   for rep = 1:2
-%         comm_all(rep) = simu_one_comm(newborns(rep), comm_struct, const_struct);
-%     end
+    % rep is the index of communities within one cycle
+    parfor rep = 1:N
+        %   for rep = 1:2
+        comm_all(rep) = simu_one_comm(newborns(rep), comm_struct, const_struct);
+    end
     distrng=rng;
     % add stochastic noise to the community function
     Pn = normrnd(0, Pn_sig, size([comm_all.P]));
@@ -147,20 +147,7 @@ for n = C_prev+1 %: C
     comm_all_sorted = comm_all(I);
     % I=randperm(comm_type_num*comm_rep_num);
     if abs(n - check_cycle + 2) < 0.1
-        
-        load('G10/comm_gen')
-        comm_selected(1:2,1) = comm_struct;
-        for k = 1:2
-            comm_selected(k).M_L = comm_gen(k).B1_L;
-            comm_selected(k).H_L = comm_gen(k).B2_L;
-            comm_selected(k).gM_max = comm_gen(k).B1_umax;
-            comm_selected(k).gH_max = comm_gen(k).B2_umax;
-            comm_selected(k).K_MR = comm_gen(k).B1_KsFold;
-            comm_selected(k).K_HR = comm_gen(k).B2_KsFold;
-            comm_selected(k).K_MB = comm_gen(k).B1_KmFold;
-            comm_selected(k).fp = comm_gen(k).B1_beta1;
-        end
-%         comm_selected = comm_all_sorted(1:comm_type_num);
+        comm_selected = comm_all_sorted(1:comm_type_num);
         % newborns of parents
         BM_selected = zeros(comm_type_num, 1);
         % rep_num_M is a matrix for the number of newborns for selection
