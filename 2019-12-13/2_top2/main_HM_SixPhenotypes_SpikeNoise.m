@@ -1,18 +1,19 @@
 clear
 
-C_prev = 1512;
-C = 1700; % total number of cycles
+C_prev = 19;
+C = 22; % total number of cycles
 check_cycle = C;
 test_rep_num = 3;
 spike_frac = 0; % fraction of H pure culture spiked in
 spike_test = [0.35 0.7];
+sl = length(spike_test);
 % upper bound for gH_max. for gH_max_Bound = 0.3, set V = 1.
 gH_max_Bound = 0.8;
 % the factor for amount of R(0)
 V = 10;
 % minimal number of Adults allowed to reproduce. comm_type_num = 1 for the
 % top-dog strategy, comm_type_num = n for the top n% strategy.
-comm_type_num = 10;
+comm_type_num = 2;
 % mutation rate corresponding to effective mutation rate of 2e-3
 % to turn off the mutation, set mut_rate=0.
 mut_rate = 1e-2; % mutation rate corresponding to effective mutation rate of 2e-3
@@ -121,7 +122,7 @@ else
 end
 
 
-for n = C_prev+1 : C
+for n = C_prev+1 %: C
     % create a folder Cn to save the results of the nth cycle
     folder_name1 = ['C' num2str(n)];
     if ~exist(folder_name1, 'dir')
@@ -133,15 +134,11 @@ for n = C_prev+1 : C
     end
     save([folder_name2 '/newborns'],'newborns');
     comm_all(1,1:N) = comm_struct;
-    % rep is the index of communities within one cycle
-    parfor rep = 1:N
-        %   for rep = 1:2
-        comm_all(rep) = simu_one_comm(newborns(rep), comm_struct, const_struct);
-    end
-    %     if abs(C - check_cycle +2) < 0.1
-    %         adults = comm_all;
-    %         save([folder_name2 '/adults'],'adults');
-    %     end
+%     % rep is the index of communities within one cycle
+%     parfor rep = 1:N
+%         %   for rep = 1:2
+%         comm_all(rep) = simu_one_comm(newborns(rep), comm_struct, const_struct);
+%     end
     distrng=rng;
     % add stochastic noise to the community function
     Pn = normrnd(0, Pn_sig, size([comm_all.P]));
@@ -150,21 +147,47 @@ for n = C_prev+1 : C
     comm_all_sorted = comm_all(I);
     % I=randperm(comm_type_num*comm_rep_num);
     if abs(n - check_cycle + 2) < 0.1
-        comm_selected = comm_all_sorted(1:comm_type_num);
-        newborns_par(1:length(spike_test), 1:N) = newborn_struct;
-        rseed = randi(2^32-1, length(spike_test), N, 'uint32');
+        
+        load('G10/comm_gen')
+        comm_selected(1:2,1) = comm_struct;
+        for k = 1:2
+            comm_selected(k).M_L = comm_gen(k).B1_L;
+            comm_selected(k).H_L = comm_gen(k).B2_L;
+            comm_selected(k).gM_max = comm_gen(k).B1_umax;
+            comm_selected(k).gH_max = comm_gen(k).B2_umax;
+            comm_selected(k).K_MR = comm_gen(k).B1_KsFold;
+            comm_selected(k).K_HR = comm_gen(k).B2_KsFold;
+            comm_selected(k).K_MB = comm_gen(k).B1_KmFold;
+            comm_selected(k).fp = comm_gen(k).B1_beta1;
+        end
+%         comm_selected = comm_all_sorted(1:comm_type_num);
+        % newborns of parents
+        BM_selected = zeros(comm_type_num, 1);
+        % rep_num_M is a matrix for the number of newborns for selection
+        % and test for each chosen adult
+        rep_num_M = zeros(comm_type_num, sl+1);
+        for i = 1:comm_type_num
+            BM_selected(i) = sum(comm_selected(i).M_L) + sum(comm_selected(i).H_L);
+            rep_num_M(i, 1) = comm_rep_num;
+            rep_num_M(i, 2:end) = min(floor((BM_selected(i) - comm_rep_num*BM_target)/BM_target/sum(1-spike_test)), comm_rep_num);       
+        end  
+        test_rep_total = sum(rep_num_M(:, end));
+        newborns_par(1:sl, 1:test_rep_total) = newborn_struct;
+        rseed = randi(2^32-1, sl, test_rep_total, 'uint32');
+        comm_type_counter = 0;
         for i = 1:comm_type_num
             comm_temp = pipette_SpikeTest_SP(comm_selected(i), newborn_struct, ...
-                const_struct, [spike_frac spike_test], comm_rep_num*[1 ones(size(spike_test))], i);
+                const_struct, [spike_frac spike_test], rep_num_M(i, :), i);
             newborns((i-1)*comm_rep_num+1:i*comm_rep_num) ...
                 = comm_temp(1:comm_rep_num);
-            for j = 1:length(spike_test)
-                newborns_par(j, (i-1)*comm_rep_num+1:i*comm_rep_num) ...
-                    = comm_temp(j*comm_rep_num+1:(j+1)*comm_rep_num);
+            for j = 1:sl
+                newborns_par(j, comm_type_counter+1:comm_type_counter+rep_num_M(i,end)) ...
+                    = comm_temp(comm_rep_num+1+(j-1)*rep_num_M(i,end) : comm_rep_num+j*rep_num_M(i,end));
             end
+            comm_type_counter = comm_type_counter+rep_num_M(i,end);
         end
-        for i = 1:length(spike_test)
-            for j = 1:N
+        for i = 1:sl
+            for j = 1:test_rep_total
                 newborns_par(i,j).rseed = rseed(i,j);
             end
         end
@@ -172,16 +195,16 @@ for n = C_prev+1 : C
         P_par = zeros(size(newborns_par));
         M0_par = zeros(size(newborns_par));
         H0_par = zeros(size(newborns_par));
-        adults_par(1:length(spike_test), 1:N) = comm_struct;
-        parfor i = 1:N*length(spike_test)
+        adults_par(1:sl, 1:test_rep_total) = comm_struct;
+        parfor i = 1:test_rep_total*sl
             adults_par(i) = simu_one_comm(newborns_par(i), comm_struct, const_struct);
             P_par(i) = adults_par(i).P;
             M0_par(i) = adults_par(i).M_t(1);
             H0_par(i) = adults_par(i).H_t(1);
         end
         save([folder_name1 '/ParResults'],'P_par','M0_par','H0_par')
-        newborns_off(1:test_rep_num*(length(spike_test) +1), 1:N) = newborn_struct;
-        rseed = randi(2^32-1,test_rep_num*(length(spike_test)+1), N, 'uint32');
+        newborns_off(1:test_rep_num*(sl+1), 1:test_rep_total) = newborn_struct;
+        rseed = randi(2^32-1,test_rep_num*(sl+1), test_rep_total, 'uint32');
         comm_selected = comm_all_sorted(1:comm_type_num);
         for i = 1:comm_type_num
             comm_temp = pipette_SpikeTest_SP(comm_selected(i), newborn_struct, ...
@@ -191,26 +214,26 @@ for n = C_prev+1 : C
             newborns_off(1 : test_rep_num, i) ...
                 = transpose(comm_temp(comm_rep_num+1:comm_rep_num+test_rep_num));
         end
-        for i = comm_type_num+1:N
+        for i = comm_type_num+1:test_rep_total
             newborns_off(1 : test_rep_num, i) ...
                 = transpose(pipette_SpikeTest_SP(comm_all_sorted(i), newborn_struct, ...
                 const_struct, spike_frac, test_rep_num, i));
         end
-        for i = 1:length(spike_test)
-            for j = 1:N
+        for i = 1:sl
+            for j = 1:test_rep_total
                 newborns_off(i*test_rep_num+1:(i+1)*test_rep_num, j) ...
                     = transpose(pipette_SpikeTest_SP(adults_par(i,j), newborn_struct, ...
                     const_struct, spike_test(i), test_rep_num, j));
             end
         end
-        for i = 1:test_rep_num * (length(spike_test)+1) * N
+        for i = 1:test_rep_num * (sl+1) * test_rep_total
             newborns_off(i).rseed = rseed(i);
         end
     elseif abs(n - check_cycle) < 0.1
         P_off = zeros(size(newborns_off));
         M0_off = zeros(size(newborns_off));
         H0_off = zeros(size(newborns_off));
-        parfor i=1 : N*test_rep_num*(length(spike_test)+1)
+        parfor i=1 : test_rep_total*test_rep_num*(sl+1)
             comm_temp = simu_one_comm(newborns_off(i), comm_struct, const_struct);
             P_off(i) = comm_temp.P;
             M0_off(i) = comm_temp.M_t(1);
