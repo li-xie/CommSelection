@@ -1,7 +1,7 @@
 clear
 
-C_prev = 22;
-C = 50; % total number of cycles
+C_prev = 19;
+C = 22; % total number of cycles
 check_cycle = C;
 test_rep_num = 3;
 spike_frac = 0; % fraction of H pure culture spiked in
@@ -85,7 +85,7 @@ const_struct=struct('t_binnum',t_binnum,'max_popul',max_popul,'comm_rep_num',com
     'fp_Bound', fp_Bound, 'K_MB_Bound', K_MB_Bound,'K_MR_Bound', K_MR_Bound, ...
     'K_HR_Bound', K_HR_Bound, 'R0', R0, 'K_singular', K_singular, 'dM', dM, 'dH', dH, ...
     'c_BM', c_BM, 'c_RM', c_RM, 'c_RH', c_RH, 'mut_rate', mut_rate);
-%%
+
 if C_prev > 0
     load('comm_all/newborns')
 else
@@ -121,9 +121,8 @@ else
     end
 end
 
-n = C_prev+1;
-% for n = C_prev+1 : max(C, check_cycle)
-while n <= max(C, check_cycle)
+
+for n = C_prev+1 %: C
     % create a folder Cn to save the results of the nth cycle
     folder_name1 = ['C' num2str(n)];
     if ~exist(folder_name1, 'dir')
@@ -135,76 +134,64 @@ while n <= max(C, check_cycle)
     end
     save([folder_name2 '/newborns'],'newborns');
     comm_all(1,1:N) = comm_struct;
-    % rep is the index of communities within one cycle
-    parfor rep = 1:N
-        %   for rep = 1:2
-        comm_all(rep) = simu_one_comm(newborns(rep), comm_struct, const_struct);
-    end
+%     % rep is the index of communities within one cycle
+%     parfor rep = 1:N
+%         %   for rep = 1:2
+%         comm_all(rep) = simu_one_comm(newborns(rep), comm_struct, const_struct);
+%     end
     distrng=rng;
     % add stochastic noise to the community function
     Pn = normrnd(0, Pn_sig, size([comm_all.P]));
     P_all = [comm_all.P];
     [~, I] = sort([comm_all.P] + Pn, 'descend');
+    comm_all_sorted = comm_all(I);
     % I=randperm(comm_type_num*comm_rep_num);
-    check_flag = false;
     if abs(n - check_cycle + 2) < 0.1
-        sel_counter = 0;
-        rep_counter = 0;
+        
+        load('G10/comm_gen')
+        comm_selected(1:2,1) = comm_struct;
+        for k = 1:2
+            comm_selected(k).M_L = comm_gen(k).B1_L;
+            comm_selected(k).H_L = comm_gen(k).B2_L;
+            comm_selected(k).gM_max = comm_gen(k).B1_umax;
+            comm_selected(k).gH_max = comm_gen(k).B2_umax;
+            comm_selected(k).K_MR = comm_gen(k).B1_KsFold;
+            comm_selected(k).K_HR = comm_gen(k).B2_KsFold;
+            comm_selected(k).K_MB = comm_gen(k).B1_KmFold;
+            comm_selected(k).fp = comm_gen(k).B1_beta1;
+        end
+%         comm_selected = comm_all_sorted(1:comm_type_num);
+        % newborns of parents
+        BM_selected = zeros(comm_type_num, 1);
         % rep_num_M is a matrix for the number of newborns for selection
         % and test for each chosen adult
-        rep_num_M = zeros(N, sl+1);
-        for i = 1 : comm_type_num*comm_rep_num
-            if rep_counter >= comm_type_num*comm_rep_num
-                break
-            end
-            BM = comm_all(I(i)).M_t(end) + comm_all(I(i)).H_t(end);
-            % number of test comms the Adult can contribute
-            test_rep_temp = floor((BM - comm_rep_num*BM_target*(1-spike_frac))...
-                    /BM_target/sum(1-spike_test));
-            % if the number of test comms is too small, increase the test cycle by 1           
-            if test_rep_temp < round(comm_rep_num/5)
-                check_cycle = check_cycle+1;
-                check_flag = false;
-                break
-            else
-                rep_num_M(i, 1) = comm_rep_num;
-                rep_num_M(i, 2:end) = min(test_rep_temp, comm_rep_num);
-                check_flag = true;
-            end
-            sel_counter = sel_counter+1;
-%             rep_num_temp = min([dil_factor, comm_rep_num, N-rep_counter]);
-            rep_counter = rep_counter+comm_rep_num;
-        end
-        comm_selected = comm_all(I(1:sel_counter));
-        rep_num_M = rep_num_M(1:sel_counter, :);
+        rep_num_M = zeros(comm_type_num, sl+1);
+        for i = 1:comm_type_num
+            BM_selected(i) = sum(comm_selected(i).M_L) + sum(comm_selected(i).H_L);
+            rep_num_M(i, 1) = comm_rep_num;
+            rep_num_M(i, 2:end) = min(floor((BM_selected(i) - comm_rep_num*BM_target)/BM_target/sum(1-spike_test)), comm_rep_num);       
+        end  
         test_rep_total = sum(rep_num_M(:, end));
-        
-        if check_flag == true
-            % newborns of parents
-            newborns_par(1:sl, 1:test_rep_total) = newborn_struct;
-            rseed = randi(2^32-1, sl, test_rep_total, 'uint32');
-            comm_type_counter = 0;
-            rep_counter = 0;
-            for i = 1:sel_counter
-                comm_temp = pipette_SpikeTest_SP(comm_selected(i), newborn_struct, ...
-                    const_struct, [spike_frac spike_test], rep_num_M(i, :), i);
-                newborns(rep_counter+1:rep_counter+rep_num_M(i, 1)) ...
-                    = comm_temp(1:rep_num_M(i, 1));
-                rep_counter = rep_counter + rep_num_M(i, 1);
-                for j = 1:sl
-                    newborns_par(j, comm_type_counter+1:comm_type_counter+rep_num_M(i,end)) ...
-                        = comm_temp(rep_num_M(i, 1)+1+(j-1)*rep_num_M(i,end) : rep_num_M(i, 1)+j*rep_num_M(i,end));
-                end
-                comm_type_counter = comm_type_counter+rep_num_M(i,end);
+        newborns_par(1:sl, 1:test_rep_total) = newborn_struct;
+        rseed = randi(2^32-1, sl, test_rep_total, 'uint32');
+        comm_type_counter = 0;
+        for i = 1:comm_type_num
+            comm_temp = pipette_SpikeTest_SP(comm_selected(i), newborn_struct, ...
+                const_struct, [spike_frac spike_test], rep_num_M(i, :), i);
+            newborns((i-1)*comm_rep_num+1:i*comm_rep_num) ...
+                = comm_temp(1:comm_rep_num);
+            for j = 1:sl
+                newborns_par(j, comm_type_counter+1:comm_type_counter+rep_num_M(i,end)) ...
+                    = comm_temp(comm_rep_num+1+(j-1)*rep_num_M(i,end) : comm_rep_num+j*rep_num_M(i,end));
             end
-            for i = 1:sl
-                for j = 1:test_rep_total
-                    newborns_par(i,j).rseed = rseed(i,j);
-                end
+            comm_type_counter = comm_type_counter+rep_num_M(i,end);
+        end
+        for i = 1:sl
+            for j = 1:test_rep_total
+                newborns_par(i,j).rseed = rseed(i,j);
             end
         end
     elseif abs(n - check_cycle + 1) < 0.1
-%         check_flag = 1;           
         P_par = zeros(size(newborns_par));
         M0_par = zeros(size(newborns_par));
         H0_par = zeros(size(newborns_par));
@@ -218,31 +205,18 @@ while n <= max(C, check_cycle)
         save([folder_name1 '/ParResults'],'P_par','M0_par','H0_par')
         newborns_off(1:test_rep_num*(sl+1), 1:test_rep_total) = newborn_struct;
         rseed = randi(2^32-1,test_rep_num*(sl+1), test_rep_total, 'uint32');
-        sel_counter = 0;
-        rep_counter = 0;
-        for i = 1 : comm_type_num*comm_rep_num
-            if rep_counter >= comm_type_num*comm_rep_num
-                break
-            end
-            BM = comm_all(I(i)).M_t(end) + comm_all(I(i)).H_t(end);
-            dil_factor = floor(BM/BM_target/(1-spike_frac));
-            if dil_factor == 0
-                continue
-            end
-            rep_num_temp = min([dil_factor-test_rep_num, comm_rep_num, N-rep_counter]);
-            comm_temp = pipette_SpikeTest_SP(comm_all(I(i)), newborn_struct, ...
-                const_struct, spike_frac, test_rep_num + rep_num_temp, i);
-            newborns(rep_counter+1:rep_counter+rep_num_temp) ...
-                = comm_temp(1:rep_num_temp);
+        comm_selected = comm_all_sorted(1:comm_type_num);
+        for i = 1:comm_type_num
+            comm_temp = pipette_SpikeTest_SP(comm_selected(i), newborn_struct, ...
+                const_struct, spike_frac, test_rep_num + comm_rep_num, i);
+            newborns((i-1)*comm_rep_num+1:i*comm_rep_num) ...
+                = comm_temp(1:comm_rep_num);
             newborns_off(1 : test_rep_num, i) ...
-                = transpose(comm_temp(rep_num_temp+1:rep_num_temp+test_rep_num));
-            sel_counter = sel_counter+1;
-            rep_counter = rep_counter+rep_num_temp;
+                = transpose(comm_temp(comm_rep_num+1:comm_rep_num+test_rep_num));
         end
-        comm_selected = comm_all(I(1:sel_counter));
-        for i = sel_counter+1:test_rep_total
+        for i = comm_type_num+1:test_rep_total
             newborns_off(1 : test_rep_num, i) ...
-                = transpose(pipette_SpikeTest_SP(comm_all(I(i)), newborn_struct, ...
+                = transpose(pipette_SpikeTest_SP(comm_all_sorted(i), newborn_struct, ...
                 const_struct, spike_frac, test_rep_num, i));
         end
         for i = 1:sl
@@ -265,28 +239,28 @@ while n <= max(C, check_cycle)
             M0_off(i) = comm_temp.M_t(1);
             H0_off(i) = comm_temp.H_t(1);
         end
-        check_flag = 0;
         save([folder_name1 '/OffResults'],'P_off','M0_off','H0_off')
-    end
-    if check_flag ==0
+    else
         rep_counter = 0;
         sel_counter = 0;
-        %         comm_selected(1 : comm_type_num*comm_rep_num,1) = comm_struct;
+        comm_selected(1 : comm_type_num*comm_rep_num,1) = comm_struct;
         for i = 1 : comm_type_num*comm_rep_num
             if rep_counter >= comm_type_num*comm_rep_num
                 break
             end
-            dil_factor = floor((comm_all(I(i)).M_t(end)+comm_all(I(i)).H_t(end))/BM_target/(1-spike_frac));
+            dil_factor = floor((comm_all_sorted(i).M_t(t_binnum+1)+comm_all_sorted(i).H_t(t_binnum+1))/BM_target/(1-spike_frac));
             if dil_factor == 0
                 continue
             end
-            rep_num_temp = min([dil_factor, comm_rep_num, N-rep_counter]);
-            newborns(rep_counter+1:rep_counter+rep_num_temp) = pipette_SpikeTest_SP(comm_all(I(i)), newborn_struct, ...
-                const_struct, spike_frac, rep_num_temp, i);
+            rep_num_temp = min(dil_factor, comm_rep_num);
+            comm_all_idx = min(comm_type_num*comm_rep_num, rep_counter+rep_num_temp);
+            newborns(rep_counter+1:comm_all_idx) = pipette_SpikeTest_SP(comm_all_sorted(i), newborn_struct, ...
+                const_struct, spike_frac, N/comm_type_num, i);
             sel_counter=sel_counter+1;
+            comm_selected(sel_counter)=comm_all_sorted(i);
             rep_counter=rep_counter+rep_num_temp;
         end
-        comm_selected=comm_all(I(1:sel_counter));
+        comm_selected=comm_selected(1:sel_counter);
     end
     % assign random number seed to Newborns of the next cycle
     rseed = randi(2^32-1,comm_type_num*comm_rep_num,1,'uint32');
@@ -299,11 +273,9 @@ while n <= max(C, check_cycle)
     save([folder_name1 '/distrng'],'distrng');
     save([folder_name2 '/P_all'], 'P_all');
     save([folder_name2 '/Pn'],'Pn');
-    n = n+1;
 end
 % save Newborns of the (C+1)th cycle
 if ~exist('comm_all','dir')
     mkdir('comm_all')
 end
 save('comm_all/newborns', 'newborns')
-save('comm_all/check_cycle','check_cycle')
