@@ -2,7 +2,7 @@ clear
 
 C_prev = 0;
 C = 2000; % total number of cycles
-check_cycle = C+10;
+check_cycle = C+10; % never check
 test_rep_num = 3;
 spike_frac = 0; % fraction of H pure culture spiked in
 spike_test = [0.35 0.7];
