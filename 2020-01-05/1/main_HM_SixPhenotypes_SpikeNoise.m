@@ -13,7 +13,7 @@ gH_max_Bound = 0.8;
 V = 10;
 % minimal number of Adults allowed to reproduce. comm_type_num = 1 for the
 % top-dog strategy, comm_type_num = n for the top n% strategy.
-comm_type_num = 10;
+comm_type_num = 10; % select top 10
 % mutation rate corresponding to effective mutation rate of 2e-3
 % to turn off the mutation, set mut_rate=0.
 mut_rate = 1e-2; % mutation rate corresponding to effective mutation rate of 2e-3
