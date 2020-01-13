@@ -6,7 +6,7 @@ C = 1e3; % total number of cycles
 T0 = 17;
 % minimal number of Adults allowed to reproduce. comm_type_num = 1 for the
 % top-dog strategy, comm_type_num = n for the top n% strategy.
-comm_type_num = 1; 
+comm_type_num = 2; 
 % mut_rate = 1e-2 corresponding to effective mutation rate of 2e-3,
 % mut_rate = 1e-4 corresponding to effective mutation rate of 2e-5, as in
 % Fig S18
@@ -30,7 +30,7 @@ max_popul = 1e4; % maximal number of cells in the community
 t_bin = 0.05; % time step in the simulation
 pcs=1e-15; % precision constant
 t_binnum = int16(T0/t_bin); % number of time steps
-spike_frac = 0.5; % fraction of H pure culture spiked in
+spike_frac = 0; % fraction of H pure culture spiked in
 
 % BM_target is the target biomass, T0 is the maturation time
 BM_target = 100;
