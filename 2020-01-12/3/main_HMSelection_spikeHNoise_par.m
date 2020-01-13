@@ -11,6 +11,7 @@ comm_type_num = 2;
 % mut_rate = 1e-4 corresponding to effective mutation rate of 2e-5, as in
 % Fig S18
 mut_rate = 1e-2; 
+Pn_sig = 100; % std of the noise
 % reproducing method
 % @pipette: reproduce through pipetting, allowing both BM(0) and
 %          phi_M(0) to fluctuate
@@ -226,8 +227,11 @@ for n = 1 : C
     save([folder_name2 '/newborns'],'newborns');
     % save the current state of the random number generator
     distrng = rng;
+    % add stochastic noise to the community function
+    Pn = normrnd(0, Pn_sig, size([comm_all.P]));
+    P_all = [comm_all.P];
     % sort the communities in descending order of their functions
-    [~, I] = sort([comm_all.P],'descend');
+    [~, I] = sort([comm_all.P] + Pn, 'descend');
     % I = randperm(comm_type_num*comm_rep_num);
     comm_all_sorted = comm_all(I);
     % counter for the Newborn in the next cycle
@@ -261,7 +265,8 @@ for n = 1 : C
     % save the selected communities and the current state of the random number generator 
     save([folder_name1 '/comm_selected'],'comm_selected');
     save([folder_name1 '/distrng'],'distrng');
-    
+    save([folder_name2 '/P_all'], 'P_all');
+    save([folder_name2 '/Pn'],'Pn');
 end
 % % save Newborns of the (C+1)th cycle 
 % if ~exist('comm_all','dir')
