@@ -22,7 +22,7 @@ fp = comm_selected.fp;
 M_counter = nnz(comm_selected.M_L);
 H_counter = nnz(comm_selected.H_L);
 H_spike_mean = H_Biomass_spike/H_L(1);
-H_spike = round(normrnd(H_spike_mean, sqrt(H_spike_mean), [dil_factor,1]));
+H_spike = poissrnd(H_spike_mean, [dil_factor,1]);
 % assign a random number between 1 and dil_factor to each cell
 rand_temp = ceil(rand(M_counter + H_counter,1)*dil_factor);
 % if the Adult can generate more Newborns than comm_rep_num, keep only
