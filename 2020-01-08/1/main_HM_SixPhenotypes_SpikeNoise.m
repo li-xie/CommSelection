@@ -1,6 +1,6 @@
 clear
 
-C_prev = 800;
+C_prev = 0;
 C = 2000; % total number of cycles
 check_cycle = C+10; 
 test_rep_num = 3;
@@ -8,12 +8,12 @@ spike_frac = 0; % fraction of H pure culture spiked in
 spike_test = [0.3 0.6];
 sl = length(spike_test);
 % upper bound for gH_max. for gH_max_Bound = 0.3, set V = 1.
-gH_max_Bound = 0.8;
+gH_max_Bound = 0.3;
 % the factor for amount of R(0)
-V = 10;
+V = 1;
 % minimal number of Adults allowed to reproduce. comm_type_num = 1 for the
 % top-dog strategy, comm_type_num = n for the top n% strategy.
-comm_type_num = 2;
+comm_type_num = 10;
 % mutation rate corresponding to effective mutation rate of 2e-3
 % to turn off the mutation, set mut_rate=0.
 mut_rate = 1e-2; % mutation rate corresponding to effective mutation rate of 2e-3
