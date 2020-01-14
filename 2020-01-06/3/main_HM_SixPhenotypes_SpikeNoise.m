@@ -1,8 +1,8 @@
 clear
 
-C_prev = 0;
-C = 200; % total number of cycles
-check_cycle = C; 
+C_prev = 800;
+C = 2000; % total number of cycles
+check_cycle = C+10; 
 test_rep_num = 3;
 spike_frac = 0; % fraction of H pure culture spiked in
 spike_test = [0.3 0.6];
@@ -123,7 +123,7 @@ end
 
 n = C_prev+1;
 % for n = C_prev+1 : max(C, check_cycle)
-while n <= max(C, check_cycle)
+while n <= C %max(C, check_cycle)
     % create a folder Cn to save the results of the nth cycle
     folder_name1 = ['C' num2str(n)];
     if ~exist(folder_name1, 'dir')
@@ -148,7 +148,7 @@ while n <= max(C, check_cycle)
     if max(P_all)<Pn_sig
         save([folder_name1 '/comm_selected'],'comm_selected');
         break
-    end        
+    end  
     [~, I] = sort([comm_all.P] + Pn, 'descend');
     % I=randperm(comm_type_num*comm_rep_num);
     check_flag = false;
