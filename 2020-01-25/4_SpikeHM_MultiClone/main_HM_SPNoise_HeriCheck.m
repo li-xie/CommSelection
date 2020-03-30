@@ -7,7 +7,7 @@ spike_clone_num = 5;
 C = 3000; % total number of cycles
 % number of offspring communities from each parent community to test
 % heritability
-test_rep_num = 6;  
+off_rep_max = 6;  
 n_bstrap = 1e3; % number of bootstraping for heritability
 % 1-q is the confidence interval of the heritability
 q = 0.05;
@@ -100,6 +100,7 @@ if C_prev > 0
             % test the following spiking fractions of H biomass
             spike_test = spike_initial(2:end);
             spike_all = [spike_frac spike_test];
+            check_cycle = C_prev+check_period;
         else
             % heritability is checked during the check_cycle
             check_cycle = max(C_prev+3, check_cycle_m(end)+check_period);
@@ -326,13 +327,13 @@ while n <= C
             if dil_factor == 0
                 continue
             end
-            rep_num_temp = min([dil_factor-test_rep_num, comm_rep_num, N-rep_counter]);
+            rep_num_temp = min([dil_factor-off_rep_max, comm_rep_num, N-rep_counter]);
             % if a chosen Adult produces less than test_rep_num Newborns, skip this Adult
             % for heritability check
             if rep_num_temp > 0
                 heri_par_counter = heri_par_counter+1;
                 heri_par_idx(heri_par_counter) = i;
-                rep_num_C(i) = rep_num_temp+test_rep_num;
+                rep_num_C(i) = rep_num_temp+off_rep_max;
             else
                 rep_num_temp = min([dil_factor, comm_rep_num, N-rep_counter]);
                 rep_num_C(i) = rep_num_temp;
@@ -352,7 +353,7 @@ while n <= C
             check_cycle_m(check_counter) = check_cycle;
             save('check_cycle_m','check_cycle_m')
             % newborns_off is the structure array for offspring Newborns  
-            newborns_off(1:test_rep_num*(sl+1), 1:test_rep) = newborn_struct;
+            newborns_off(1:off_rep_max*(sl+1), 1:test_rep) = newborn_struct;
             comm_selected = comm_all(I(1:sel_counter));
             rep_num_C = rep_num_C(1:sel_counter);
             % P_par is the array for P(T) of parents
@@ -381,7 +382,7 @@ while n <= C
             end
             % only the top test_rep parent Adults reproduce
             adults_par = adults_par(:,1:test_rep);
-            rseed = randi(2^32-1,test_rep_num*(sl+1), test_rep, 'uint32');
+            rseed = randi(2^32-1,off_rep_max*(sl+1), test_rep, 'uint32');
             % reproduce Adults of the current substitution ratio into Newborns for
             % selection and offspring Newborns for checking heritability
             rep_counter = 0;
@@ -391,7 +392,7 @@ while n <= C
                 if dil_factor == 0
                     continue
                 end
-                rep_num_temp = min([dil_factor-test_rep_num, comm_rep_num, N-rep_counter]);
+                rep_num_temp = min([dil_factor-off_rep_max, comm_rep_num, N-rep_counter]);
                 if rep_num_temp > 0
                     [comm_temp, H_isolates_out(i), M_isolates_out(i)] = pipette_SpikeMix_SPHM(comm_all(I(i)), newborn_struct, ...
                         const_struct, spike_frac, rep_num_C(i), ...
@@ -399,7 +400,7 @@ while n <= C
                         M_isolates_in(comm_all(I(i)).parentnum), spike_clone_num, i);
                     newborns(rep_counter+1:rep_counter+rep_num_temp) ...
                         = comm_temp(1:rep_num_temp);
-                    newborns_off(1 : test_rep_num, i) ...
+                    newborns_off(1 : off_rep_max, i) ...
                         = transpose(comm_temp(rep_num_temp+1:end));
                 else
                     rep_num_temp = min([dil_factor, comm_rep_num, N-rep_counter]);
@@ -414,7 +415,7 @@ while n <= C
             for i = sel_counter+1:test_rep
                 BM = comm_all(I(i)).M_t(end) + comm_all(I(i)).H_t(end);
                 dil_factor = floor(BM/BM_target/(1-abs(spike_frac)));
-                off_rep_num = min(test_rep_num, dil_factor);
+                off_rep_num = min(off_rep_max, dil_factor);
                 if dil_factor > 0
                     [comm_temp, ~, ~]...
                         = pipette_SpikeMix_SPHM(comm_all(I(i)), newborn_struct, ...
@@ -430,13 +431,13 @@ while n <= C
                 for j = 1:test_rep
                     BM = adults_par(i,j).M_t(end) + adults_par(i,j).H_t(end);
                     dil_factor = floor(BM/BM_target/(1-abs(spike_test(i))));
-                    off_rep_num = min(test_rep_num, dil_factor);
+                    off_rep_num = min(off_rep_max, dil_factor);
                     [comm_temp, ~, ~] = pipette_SpikeMix_SPHM(adults_par(i,j), newborn_struct,...
                         const_struct, spike_test(i), off_rep_num,...
                         H_isolates_in(adults_par(i,j).parentnum),...
                         M_isolates_in(adults_par(i,j).parentnum),...
                         spike_clone_num, j);
-                    newborns_off(i*test_rep_num+1:i*test_rep_num+off_rep_num, j) ...
+                    newborns_off(i*off_rep_max+1:i*off_rep_max+off_rep_num, j) ...
                         = transpose(comm_temp);
                 end
             end
@@ -444,7 +445,7 @@ while n <= C
             H_isolates_in = H_isolates_out;
 %             M_isolates_out = clean_HM_isolates(M_isolates_out, M_isolates_in);
             M_isolates_in = M_isolates_out;
-            for i = 1:test_rep_num * (sl+1) * test_rep
+            for i = 1:off_rep_max * (sl+1) * test_rep
                 newborns_off(i).rseed = rseed(i);
             end
             clear newborns_par adults_par
@@ -457,7 +458,7 @@ while n <= C
         P_off = zeros(size(newborns_off));
         M0_off = zeros(size(newborns_off));
         H0_off = zeros(size(newborns_off));
-        parfor i=1 : test_rep*test_rep_num*(sl+1)
+        parfor i=1 : test_rep*off_rep_max*(sl+1)
             if sum(newborns_off(i).M_L)+sum(newborns_off(i).H_L) < pcs
                 P_off(i) = NaN;
                 M0_off(i) = 0;
@@ -496,15 +497,15 @@ while n <= C
         % heritability is defined as the Spearman correlation coefficient between P(T) of
         % parent Adults and average P(T) among offspring Adults from each lineage
         heri(1) = corr_func((P_sorted(heri_par_idx))',...
-            (nanmedian(P_off(1:test_rep_num, heri_par_idx)))');
+            (nanmedian(P_off(1:off_rep_max, heri_par_idx)))');
         % the confidence interval is estimated from bootstraping
         [lb(1), ub(1)] = bstrap_itvl((P_sorted(heri_par_idx))',...
-            (nanmedian(P_off(1:test_rep_num, heri_par_idx)))', @corr_func, n_bstrap, q);
+            (nanmedian(P_off(1:off_rep_max, heri_par_idx)))', @corr_func, n_bstrap, q);
         for i = 1:sl
             heri(i+1) = corr_func(P_par_sorted(i, 1:test_rep)', ...
-                (nanmedian(P_off(i*test_rep_num+1:(i+1)*test_rep_num, 1:test_rep)))');
+                (nanmedian(P_off(i*off_rep_max+1:(i+1)*off_rep_max, 1:test_rep)))');
             [lb(i+1), ub(i+1)] = bstrap_itvl(P_par_sorted(i, 1:test_rep)',...
-                (nanmedian(P_off(i*test_rep_num+1:(i+1)*test_rep_num, 1:test_rep)))', @corr_func, n_bstrap, q);
+                (nanmedian(P_off(i*off_rep_max+1:(i+1)*off_rep_max, 1:test_rep)))', @corr_func, n_bstrap, q);
         end
         clear P_par_sorted
         
