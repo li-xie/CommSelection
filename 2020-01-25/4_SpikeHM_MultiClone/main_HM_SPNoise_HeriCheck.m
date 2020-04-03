@@ -303,14 +303,6 @@ while n <= C
         end
         test_rep = min(test_rep_total, test_rep_max);
         % H isolates that might be used to spike during the next cycle
-        H_isolates_out(1, 1:sel_counter) ...
-            = struct('gH_max', -ones(spike_clone_num, 1), 'K_HR', -ones(spike_clone_num, 1),...
-            'H_L', -ones(spike_clone_num, 1));
-        % M isolates that might be used to spike during the next cycle
-        M_isolates_out(1, 1:sel_counter) ...
-            = struct('gM_max', -ones(spike_clone_num, 1), 'K_MR', -ones(spike_clone_num, 1),...
-            'M_L', -ones(spike_clone_num, 1), 'fp', -ones(spike_clone_num, 1),...
-            'K_MB', -ones(spike_clone_num, 1));
         sel_counter = 0;
         rep_counter = 0;
         rep_num_C = zeros(N, 1);
@@ -352,7 +344,15 @@ while n <= C
             check_counter = check_counter+1;
             check_cycle_m(check_counter) = check_cycle;
             save('check_cycle_m','check_cycle_m')
-            % newborns_off is the structure array for offspring Newborns  
+            H_isolates_out(1, 1:sel_counter) ...
+                = struct('gH_max', -ones(spike_clone_num, 1), 'K_HR', -ones(spike_clone_num, 1),...
+                'H_L', -ones(spike_clone_num, 1));
+            % M isolates that might be used to spike during the next cycle
+            M_isolates_out(1, 1:sel_counter) ...
+                = struct('gM_max', -ones(spike_clone_num, 1), 'K_MR', -ones(spike_clone_num, 1),...
+                'M_L', -ones(spike_clone_num, 1), 'fp', -ones(spike_clone_num, 1),...
+                'K_MB', -ones(spike_clone_num, 1));
+            % newborns_off is the structure array for offspring Newborns
             newborns_off(1:off_rep_max*(sl+1), 1:test_rep) = newborn_struct;
             comm_selected = comm_all(I(1:sel_counter));
             rep_num_C = rep_num_C(1:sel_counter);
@@ -553,11 +553,11 @@ while n <= C
         rep_counter = 0;
         sel_counter = 0;
         % H isolates that might be used to spike during the next cycle
-        H_isolates_out(1, 1:sel_counter) ...
+        H_isolates_out(1, 1:N) ...
             = struct('gH_max', -ones(spike_clone_num, 1), 'K_HR', -ones(spike_clone_num, 1),...
             'H_L', -ones(spike_clone_num, 1));
         % M isolates that might be used to spike during the next cycle
-        M_isolates_out(1, 1:sel_counter) ...
+        M_isolates_out(1, 1:N) ...
             = struct('gM_max', -ones(spike_clone_num, 1), 'K_MR', -ones(spike_clone_num, 1),...
             'M_L', -ones(spike_clone_num, 1), 'fp', -ones(spike_clone_num, 1),...
             'K_MB', -ones(spike_clone_num, 1));
@@ -578,9 +578,9 @@ while n <= C
             rep_counter=rep_counter+rep_num_temp;
         end
 %         H_isolates_out = clean_HM_isolates(H_isolates_out, H_isolates_in);
-        H_isolates_in = H_isolates_out;
+        H_isolates_in = H_isolates_out(1:sel_counter);
 %         M_isolates_out = clean_HM_isolates(M_isolates_out, M_isolates_in);
-        M_isolates_in = M_isolates_out;
+        M_isolates_in = M_isolates_out(1:sel_counter);
         comm_selected = comm_all(I(1:sel_counter));
     end
     % assign random number seed to Newborns of the next cycle
@@ -588,7 +588,7 @@ while n <= C
     for ri = 1 : N
         newborns(ri).rseed = rseed(ri);
     end
-    
+    clear H_isolates_out M_isolates_out
     % save the selected communities and the current state of the random number generator
     save([folder_name1 '/comm_selected'],'comm_selected');
     save([folder_name1 '/H_isolates_in'],'H_isolates_in');
