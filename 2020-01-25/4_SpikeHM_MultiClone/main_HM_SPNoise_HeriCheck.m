@@ -104,7 +104,8 @@ if C_prev > 0
         else
             % heritability is checked during the check_cycle
             check_cycle = max(C_prev+3, check_cycle_m(end)+check_period);
-            load(['C' num2str(check_cycle_m(end)) '/spike_all']);
+%             load(['C' num2str(check_cycle_m(end)) '/spike_all']);
+            load('comm_all/spike_all')
             spike_frac = spike_all(1);
             spike_test = spike_all(2:end);
         end
@@ -609,4 +610,5 @@ if ~exist('comm_all','dir')
 end
 % save('comm_all/newborns', 'newborns')
 save('comm_all/check_cycle_m','check_cycle_m')
+save('comm_all/spike_all','spike_all')
 % save('comm_all/flag_m','flag_m')
