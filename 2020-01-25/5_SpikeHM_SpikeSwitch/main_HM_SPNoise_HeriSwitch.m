@@ -1,5 +1,7 @@
 clear
 % dbstop if error
+% HeriSwitch=0: random, HeriSwitch=1: highest heri, HeriSwitch=-1: lowest heri
+HeriSwitch = int8(-1);
 % number of previous cycles
 C_prev = 0;
 spike_initial = [0 0.3 0.6 -0.3 -0.6];
@@ -7,7 +9,7 @@ spike_clone_num = 5;
 C = 3000; % total number of cycles
 % number of offspring communities from each parent community to test
 % heritability
-off_rep_max = 6;  
+off_rep_max = 6;
 n_bstrap = 1e3; % number of bootstraping for heritability
 % 1-q is the confidence interval of the heritability
 q = 0.05;
@@ -104,7 +106,7 @@ if C_prev > 0
         else
             % heritability is checked during the check_cycle
             check_cycle = max(C_prev+3, check_cycle_m(end)+check_period);
-%             load(['C' num2str(check_cycle_m(end)) '/spike_all']);
+            %             load(['C' num2str(check_cycle_m(end)) '/spike_all']);
             load('comm_all/spike_all')
             spike_frac = spike_all(1);
             spike_test = spike_all(2:end);
@@ -173,8 +175,8 @@ end
 n = C_prev+1;
 check_flag = false;
 % flag_m = zeros(C,2);
-while n <= C 
-%     flag_m(n, :) = [n uint8(check_flag)];
+while n <= C
+    %     flag_m(n, :) = [n uint8(check_flag)];
     % create a folder Cn to save the results of the nth cycle
     folder_name1 = ['C' num2str(n)];
     if ~exist(folder_name1, 'dir')
@@ -208,13 +210,13 @@ while n <= C
         break
     end
     % I=randperm(N);
-    % in cycle check_cycle-2, parent communities are generated if there are enough cells 
+    % in cycle check_cycle-2, parent communities are generated if there are enough cells
     if abs(n - check_cycle + 2) < 0.1 && check_cycle <= C
         sel_counter = 0;
         rep_counter = 0;
         % rep_num_M is a matrix for the numbers of newborns for selection
         % and tests for heritability under different spiking fraction
-        rep_num_M = zeros(N, sl+1); % N = 100, sl+1 = 3, # of substitution conditions; 
+        rep_num_M = zeros(N, sl+1); % N = 100, sl+1 = 3, # of substitution conditions;
         for i = 1 : N
             if rep_counter >= N
                 break
@@ -265,7 +267,7 @@ while n <= C
                 end
                 % reproduce the ith Adult into rep_num_M(i, 1) Newborns for selection,
                 % rep_num_M(i, 2) Newborns for testing heritability when spiking
-                % spike_test(1) H biomass, rep_num_M(i, 3) Newborns for testing 
+                % spike_test(1) H biomass, rep_num_M(i, 3) Newborns for testing
                 % heritability when spiking spike_test(2) H biomass, and so on
                 % comm_temp is a row structure array with sum(rep_num_M(i, :)) elements
                 [comm_temp, H_isolates_out(i), M_isolates_out(i)] = pipette_SpikeMix_SPHM(comm_selected(i), newborn_struct, ...
@@ -282,13 +284,13 @@ while n <= C
                 end
                 comm_par_counter = comm_par_counter+rep_num_M(i,end);
             end
-%             % If an Adult doesn't have H to be isolated for spiking for the next cycle,
-%             % fill the spot with H isolates from the Adult with the highest P(T). If none 
-%             % of have H to be isolated for spiking, use those H isolates from the previous
-%             % cycle.
-%             H_isolates_out = clean_HM_isolates(H_isolates_out, H_isolates_in);
+            %             % If an Adult doesn't have H to be isolated for spiking for the next cycle,
+            %             % fill the spot with H isolates from the Adult with the highest P(T). If none
+            %             % of have H to be isolated for spiking, use those H isolates from the previous
+            %             % cycle.
+            %             H_isolates_out = clean_HM_isolates(H_isolates_out, H_isolates_in);
             H_isolates_in = H_isolates_out;
-%             M_isolates_out = clean_HM_isolates(M_isolates_out, M_isolates_in);
+            %             M_isolates_out = clean_HM_isolates(M_isolates_out, M_isolates_in);
             M_isolates_in = M_isolates_out;
             % assign random number seeds to each parent Newborn.
             for i = 1:sl
@@ -297,7 +299,7 @@ while n <= C
                 end
             end
         end
-    % in cycle check_cycle-1, offspring communities are generated if there are enough cells 
+        % in cycle check_cycle-1, offspring communities are generated if there are enough cells
     elseif abs(n - check_cycle + 1) < 0.1
         if check_flag==0
             error('n = %d, check_flag=0, inconsistent', n)
@@ -442,9 +444,9 @@ while n <= C
                         = transpose(comm_temp);
                 end
             end
-%             H_isolates_out = clean_HM_isolates(H_isolates_out, H_isolates_in);
+            %             H_isolates_out = clean_HM_isolates(H_isolates_out, H_isolates_in);
             H_isolates_in = H_isolates_out;
-%             M_isolates_out = clean_HM_isolates(M_isolates_out, M_isolates_in);
+            %             M_isolates_out = clean_HM_isolates(M_isolates_out, M_isolates_in);
             M_isolates_in = M_isolates_out;
             for i = 1:off_rep_max * (sl+1) * test_rep
                 newborns_off(i).rseed = rseed(i);
@@ -494,7 +496,7 @@ while n <= C
         % lb stores the lower confidence interval under each substitution fraction
         lb = zeros(sl+1, 1);
         % heri stores the p_value of heritability under each substitution fraction
-%         p_val = zeros(sl+1, 1);
+        %         p_val = zeros(sl+1, 1);
         % heritability is defined as the Spearman correlation coefficient between P(T) of
         % parent Adults and average P(T) among offspring Adults from each lineage
         heri(1) = corr_func((P_sorted(heri_par_idx))',...
@@ -510,35 +512,50 @@ while n <= C
         end
         clear P_par_sorted
         
-        %         % if the correlation is significantly larger than 0, switch.
-        %         [heri_sorted, I_heri] = sort(heri, 'descend');
-        %         p_val_sorted = p_val(I_heri);
-        %         spike_frac = spike_all(I_heri(1));
-        %         spike_all(I_heri(1)) = [];
-        %         spike_test = spike_all;
-        %         spike_all = [spike_frac spike_test];        
-        
-        [heri_sorted, I_heri] = sort(heri(2:end),'descend');
-        spike_idx = [];
-        for i = 1:sl
-            % if the heritability of alternative spiking ratio is larger than
-            % the 95% confidence interval, switch.
-            if heri_sorted(i) > ub(1)
-            
-%             % if the lb of the heritability of alternative spiking ratio is larger than
-%             % the ub of the heritability of the current spiking ratio, switch.
-%             if lb(I_heri(i)+1) > ub(1)
-                spike_idx = I_heri(i)+1;
-                break
+        if HeriSwitch == 1
+            [heri_sorted, I_heri] = sort(heri(2:end),'descend');
+            spike_idx = [];
+            for i = 1:sl
+                % if the heritability of alternative spiking ratio is larger than
+                % the 95% confidence interval, switch.
+                if heri_sorted(i) > ub(1)
+                    
+                    %             % if the lb of the heritability of alternative spiking ratio is larger than
+                    %             % the ub of the heritability of the current spiking ratio, switch.
+                    %             if lb(I_heri(i)+1) > ub(1)
+                    spike_idx = I_heri(i)+1;
+                    break
+                end
             end
+            if ~isempty(spike_idx)
+                spike_frac = spike_all(spike_idx);
+                spike_all(spike_idx) = [];
+                spike_test = spike_all;
+                spike_all = [spike_frac spike_test];
+            end
+        elseif HeriSwitch == -1
+            [heri_sorted, I_heri] = sort(heri(2:end),'ascend');
+            spike_idx = [];
+            for i = 1:sl
+                if heri_sorted(i) < lb(1)
+                    spike_idx = I_heri(i)+1;
+                    break
+                end
+            end
+            if ~isempty(spike_idx)
+                spike_frac = spike_all(spike_idx);
+                spike_all(spike_idx) = [];
+                spike_test = spike_all;
+                spike_all = [spike_frac spike_test];
+            end
+        elseif HeriSwitch == 0
+            spike_all = spike_all(randperm(sl+1));
+            spike_frac = spike_all(1);
+            spike_test = spike_all(2:end);
+        else
+            error('HeriSwitch value not valid')
         end
-        if ~isempty(spike_idx)
-            spike_frac = spike_all(spike_idx);
-            spike_all(spike_idx) = [];
-            spike_test = spike_all;
-            spike_all = [spike_frac spike_test];
-        end
-               
+        
         save([folder_name1 '/OffResults'],'heri','lb','ub','heri_par_idx','-append')
         save([folder_name1 '/spike_all'], 'spike_all')
         clear heri_par_idx
@@ -578,9 +595,9 @@ while n <= C
             sel_counter=sel_counter+1;
             rep_counter=rep_counter+rep_num_temp;
         end
-%         H_isolates_out = clean_HM_isolates(H_isolates_out, H_isolates_in);
+        %         H_isolates_out = clean_HM_isolates(H_isolates_out, H_isolates_in);
         H_isolates_in = H_isolates_out(1:sel_counter);
-%         M_isolates_out = clean_HM_isolates(M_isolates_out, M_isolates_in);
+        %         M_isolates_out = clean_HM_isolates(M_isolates_out, M_isolates_in);
         M_isolates_in = M_isolates_out(1:sel_counter);
         comm_selected = comm_all(I(1:sel_counter));
     end
