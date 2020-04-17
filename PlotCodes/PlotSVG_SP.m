@@ -1,4 +1,4 @@
-SimuCond = {'5HM_Heri', '5HM_CT', '5HM_Rand'};
+SimuCond = {'SVG/5HM_Heri', 'SVG/5HM_CT', 'SVG/5HM_Rand'};
 cut_file_path = 'svg_cut.svg';
 f_num = [1:3; 4:6; 7:9];
 N = 3000;

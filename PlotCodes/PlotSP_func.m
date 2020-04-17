@@ -27,13 +27,13 @@ for i = 1:3
     %     filename=['PlotData/Data' num2str(i) '.mat'];
     load(filename)
     counter=counter+1;
-    fp(:,counter) = fp_commmean;
-    P(:,counter) = p_commmean;
-    K_MR(:,counter) = K_MR_commmean;
-    K_MB(:,counter) = K_MB_commmean;
-    K_HR(:,counter) = K_HR_commmean;
-    b_Mmax(:,counter) = g_Mmax_commmean;
-    b_Hmax(:,counter)=g_Hmax_commmean;
+    fp(1:N, counter) = fp_commmean(1:N);
+    P(1:N, counter) = p_commmean(1:N);
+    K_MR(1:N, counter) = K_MR_commmean(1:N);
+    K_MB(1:N, counter) = K_MB_commmean(1:N);
+    K_HR(1:N, counter) = K_HR_commmean(1:N);
+    b_Mmax(1:N, counter) = g_Mmax_commmean(1:N);
+    b_Hmax(1:N, counter)=g_Hmax_commmean(1:N);
 end
 fc = 0; % counter for figures
 %%
@@ -214,13 +214,13 @@ if spike_flag == true
     figure(fc)
     for j = 1:3
         load(['PlotData/Check' num2str(f_num(j)) '/CheckSummary'])
-        frac = zeros(N, 1);
+        frac = zeros(length(fp_commmean), 1);
         check_cycle_m = [0 check_cycle_m];
         for i = 1:length(check_cycle_m)-1
             frac(check_cycle_m(i)+1:check_cycle_m(i+1)) = spike_before_m(i, 1);
         end
         frac(check_cycle_m(end):N) = spike_after_m(end, 1);
-        plot((1:N), frac, 'color', c{j})
+        plot((1:length(frac)), frac, 'color', c{j})
         hold on
     end
     hold off
