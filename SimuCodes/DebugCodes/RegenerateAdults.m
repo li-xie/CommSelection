@@ -1,6 +1,7 @@
 clear
 c = 2939;
-load('C2939/comm_all/newborns')
+folder_name = ['C' num2str(c) '/comm_all/'];
+load([folder_name 'newborns'])
 
 gH_max_Bound = 0.3;
 % the factor for amount of R(0)
@@ -68,3 +69,4 @@ adults(1:100, 1) = comm_struct;
 parfor i = 1:100
     adults(i) = simu_one_comm(newborns(i), comm_struct, const_struct);
 end
+save([folder_name 'adults'], 'adults')
