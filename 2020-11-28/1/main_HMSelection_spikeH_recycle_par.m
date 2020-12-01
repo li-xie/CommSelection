@@ -1,11 +1,14 @@
 % Simulating community selection of H-M community in the simple scenario
 % where only fp mutates. Dynamicsare plotted in Figure 6 and Figure 3A.
 clear
-C = 3; % total number of cycles
+C = 1e3; % total number of cycles
 % minimal number of Adults allowed to reproduce. comm_type_num = 1 for the
 % top-dog strategy, comm_type_num = n for the top n% strategy.
-comm_type_num = 2; 
-Pn_sig = 100; % std of the measurement noise. In case of no noise, Pn_sig = 0. 
+comm_type_num = 10; 
+gM_add = 0.7;
+gH_add = 0.3;
+
+
 % reproducing method
 repro_method = @fixBM0_spike;
 % repro_method = @cell_sort; % reproduce through cell sorting, no spiking
@@ -13,6 +16,7 @@ spike_frac = 0; % fraction of H pure culture spiked in
 
 T0 = 17; % Maturation time
 mut_rate = 1e-2; % mut_rate = 1e-2 corresponding to effective mutation rate of 2e-3,
+Pn_sig = 0; % std of the measurement noise. In case of no noise, Pn_sig = 0. 
 N = 100; % number of communities within a cycle
 % comm_type_num * comm_rep_num = number of communities within one cycle.
 comm_rep_num = N/comm_type_num; % maximal number of offspring community from one Adult.
@@ -28,10 +32,10 @@ BM_target = 100;
 % R(0)=1, 
 R0 = 1;
 % evolved parameters shown in Table 1
-gM_max = 0.7; % max growth rate of M
-gH_max = 0.3; % max growth rate of H
-dM = gM_max*5e-3; % death rate of M
-dH = gH_max*5e-3; % death rate of H
+gM_max = 0.7 + gM_add; % max growth rate of M
+gH_max = 0.3 + gH_add; % max growth rate of H
+dM = gM_max*5e-3 + gM_add; % death rate of M
+dH = gH_max*5e-3 + gH_add; % death rate of H
 fp_start = 0.13; % fp at the beginning of selection
 c_BM = 1/3;
 c_RM = 1e-4;
@@ -148,7 +152,8 @@ for n = 1 : C
             % step
             B(dt) = BN(end)*K_MB;
             R(dt) = RN(end)*K_MR;
-            
+            M_temp = sum(M_L);
+            H_temp = sum(H_L);
             % calculate the death probability for each M cell and eliminate
             % those that die within this time step, update the total
             % biomass of M
@@ -156,14 +161,20 @@ for n = 1 : C
             M_L(death_probability < dM * t_bin) = 0;
             fp( death_probability < dM * t_bin) = 0;
             M_t(dt) = sum(M_L);
-            
+            B(dt) = B(dt) + (M_temp - M_t(dt))*c_BM;
+            R(dt) = R(dt) + (M_temp - M_t(dt))*c_RM;
             % calculate the death probability for each H cell and eliminate
             % those that die within this time step, update the total
             % biomass of H
             death_probability = rand(max_popul,1);
             H_L( death_probability < dH * t_bin) = 0;
             H_t(dt) = sum(H_L);
-            
+            B(dt) = B(dt) - (H_temp - H_t(dt));
+            if B(dt) < 0
+                B(dt) = 0;
+                %         error('B goes negative at dt = %d', dt)
+            end
+            R(dt) = R(dt) + (H_temp - H_t(dt))*c_RH;
             % if the biomass of a M cell is greater than 2, it divides
             div_idx = find(M_L >= 2);
             div_length = length(div_idx);
