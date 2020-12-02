@@ -1,11 +1,11 @@
 % Simulating community selection of H-M community in the simple scenario
 % where only fp mutates. Dynamicsare plotted in Figure 6 and Figure 3A.
 clear
-C = 3; % total number of cycles
+C = 500; % total number of cycles
 % minimal number of Adults allowed to reproduce. comm_type_num = 1 for the
 % top-dog strategy, comm_type_num = n for the top n% strategy.
-comm_type_num = 2; 
-Pn_sig = 100; % std of the measurement noise. In case of no noise, Pn_sig = 0. 
+comm_type_num = 10; 
+Pn_sig = 0; % std of the measurement noise. In case of no noise, Pn_sig = 0. 
 % reproducing method
 repro_method = @fixBM0_spike;
 % repro_method = @cell_sort; % reproduce through cell sorting, no spiking
@@ -16,7 +16,7 @@ mut_rate = 1e-2; % mut_rate = 1e-2 corresponding to effective mutation rate of 2
 N = 100; % number of communities within a cycle
 % comm_type_num * comm_rep_num = number of communities within one cycle.
 comm_rep_num = N/comm_type_num; % maximal number of offspring community from one Adult.
-max_popul = 1e4; % maximal number of cells in the community
+max_popul = 2e4; % maximal number of cells in the community
 t_bin = 0.05; % time step in the simulation
 pcs=1e-15; % precision constant
 t_binnum = int16(T0/t_bin); % number of time steps
@@ -26,12 +26,12 @@ t_binnum = int16(T0/t_bin); % number of time steps
 BM_target = 100;
 
 % R(0)=1, 
-R0 = 1;
+R0 = 1.5;
 % evolved parameters shown in Table 1
-gM_max = 0.7; % max growth rate of M
-gH_max = 0.3; % max growth rate of H
-dM = gM_max*5e-3; % death rate of M
-dH = gH_max*5e-3; % death rate of H
+gM_max = 1; % max growth rate of M
+gH_max = 0.6; % max growth rate of H
+dM = gM_max*5e-3+0.2; % death rate of M
+dH = gH_max*5e-3+0.3; % death rate of H
 fp_start = 0.13; % fp at the beginning of selection
 c_BM = 1/3;
 c_RM = 1e-4;
