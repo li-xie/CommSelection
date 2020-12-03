@@ -65,7 +65,8 @@ for tstep = 1 : gc.nsteps
     L_manu(lgt2) = L_manu(lgt2) / 2;
     % update product
     Bio_M(tstep + 1) = L_manu' * N_manu;
-    P(tstep + 1) = P(tstep) + sum(gc.r_P * fp_manu ./ (1 - fp_manu) .* (L_manu .* N_manu - L_manu_old .* N_manu_old));
+%     P(tstep + 1) = P(tstep) + sum(gc.r_P * fp_manu ./ (1 - fp_manu) .* (L_manu .* N_manu - L_manu_old .* N_manu_old));
+    P(tstep + 1) = P(tstep) + sum(gc.r_P * fp_manu .* (L_manu .* N_manu - L_manu_old .* N_manu_old));
     % update N_manu and N_help by implementing death
     N_manu = N_manu - fastbinorv(N_manu,gc.d_M * gc.dt);  %round(N_manu * gc.d_M * gc.dt);
     N_help = N_help - fastbinorv(N_help,gc.d_H * gc.dt);  %round(N_help * gc.d_H * gc.dt);
