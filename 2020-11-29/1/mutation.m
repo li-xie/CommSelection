@@ -38,7 +38,7 @@ if sum(N_manu(pot_mut_index)) > 0
         N_back = ones(length(fp_back),1);
         % update fp_manu, L_manu, N_manu, and n_genos_curr
         params = [sp0, sn0, g];
-        fp_manu(n_genos_curr + 1 : n_genos_curr + length(fp_back)) = mutrnd_Li(params,fp_back);
+        fp_manu(n_genos_curr + 1 : n_genos_curr + length(fp_back)) = mutrnd_Dunham(params,fp_back);
         L_manu(n_genos_curr + 1 : n_genos_curr + length(fp_back)) = L_back;
         N_manu(n_genos_curr + 1 : n_genos_curr + length(fp_back)) = N_back;
         n_genos_curr = n_genos_curr + length(fp_back);
