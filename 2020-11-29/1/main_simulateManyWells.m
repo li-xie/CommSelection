@@ -1,7 +1,9 @@
+clear
 resultsfolder = 'results/';
-mkdir(resultsfolder)
+start_cycle = 1599;
+end_cycle = 2e3;
+num_cycles = end_cycle;
 cycle_duration = 17;
-num_cycles = 2e3;
 multiplier = 100;
 num_wells = 100;
 compressWinner = 1;
@@ -45,10 +47,6 @@ ic_N_help = 40 * multiplier;
 ic_n_genos = 1;
 N0 = ic_L_manu' * ic_N_manu + ic_L_help' * ic_N_help;
 
-save_run_conditions(cycle_duration, num_cycles, multiplier, num_wells,...
-    cw_params, gc, time, ic_fp_manu, ic_L_manu, ic_N_manu, ic_L_help,...
-    ic_N_help, ic_n_genos, resultsfolder, seeds);
-
 newb_fp_manu = cell(1,num_wells);
 newb_L_manu = cell(1,num_wells);
 newb_N_manu = cell(1,num_wells);
@@ -64,9 +62,7 @@ for i = 1 : num_wells
     newb_N_help{i} = ic_N_help;
     newb_n_genos{i} = ic_n_genos;
 end
-
 len_fp_manu_init = length(ic_fp_manu);
-
 wellPlate_fp_manu = {};
 wellPlate_L_manu = {};
 wellPlate_N_manu = {};
@@ -78,9 +74,22 @@ wellPlate_R = {};
 wellPlate_B = {};
 wellPlate_P = {};
 wellPlate_n_genos = {};
+if start_cycle > 1
+    load([resultsfolder 'nb' num2str(start_cycle) '.mat'])
+    load([resultsfolder 'run_conditions.mat'])
+    num_cycles = end_cycle;
+    rng('shuffle')
+    seeds = [seeds(1:start_cycle-1); randi(10^8,[num_cycles-start_cycle+1, 1])];
+else
+    mkdir(resultsfolder)
+    save_newborns(newb_fp_manu,newb_L_manu,newb_N_manu,newb_L_help,newb_N_help,newb_n_genos,0,resultsfolder,[]);
+end
 
-save_newborns(newb_fp_manu,newb_L_manu,newb_N_manu,newb_L_help,newb_N_help,newb_n_genos,0,resultsfolder,[]);
-for gen = 1 : num_cycles
+save_run_conditions(cycle_duration, num_cycles, multiplier, num_wells,...
+    cw_params, gc, time, ic_fp_manu, ic_L_manu, ic_N_manu, ic_L_help,...
+    ic_N_help, ic_n_genos, resultsfolder, seeds);
+
+for gen = start_cycle : num_cycles
     rng(seeds(gen));
     parfor i = 1 : num_wells
         [wellPlate_fp_manu{i},wellPlate_L_manu{i},wellPlate_N_manu{i},...
