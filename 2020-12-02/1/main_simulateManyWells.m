@@ -1,7 +1,7 @@
 clear
 resultsfolder = 'results/';
 start_cycle = 0;
-end_cycle = 2e3;
+end_cycle = 1e3;
 num_cycles = end_cycle;
 cycle_duration = 17;
 multiplier = 100;
@@ -96,7 +96,7 @@ for gen = start_cycle : num_cycles
             wellPlate_L_help{i},wellPlate_N_help{i},wellPlate_Bio_M{i},...
             wellPlate_Bio_H{i},wellPlate_R{i},wellPlate_B{i},wellPlate_P{i},...
             wellPlate_n_genos{i},gc_out]...
-            = simulateOneWell_NoCost(gc,newb_fp_manu{i},newb_L_manu{i},newb_N_manu{i},...
+            = simulateOneWell(gc,newb_fp_manu{i},newb_L_manu{i},newb_N_manu{i},...
             newb_L_help{i},newb_N_help{i},newb_n_genos{i});
         if ~isequal(gc_out,gc)
             error('You fool! You must never change your global constants')
