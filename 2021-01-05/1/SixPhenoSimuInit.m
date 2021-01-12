@@ -24,7 +24,6 @@ if C_prev > 0
     else
         spike_all = spike_initial;
         check_cycle_m = [];
-        P_sel_dynamics = [];
         check_cycle_prev = 0;
     end
 else
@@ -76,5 +75,5 @@ else
     spike_all = spike_initial;
     check_cycle_m = [];
     P_sel_dynamics = [];
-    check_counter = 0;
+    check_cycle_prev = 0;
 end
