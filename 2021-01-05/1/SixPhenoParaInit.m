@@ -1,8 +1,8 @@
 function SixPhenoParaInit
 % Set the improvement threshold that would trigger a heritability check
 % If the improvement over the last recent_cycles is less than inc_thre, check heritability 
-s_check.min_check_int = 10;
-s_check.inc_thre = 0.1;
+s_check.min_check_int = 20;
+s_check.inc_thre = 2;
 s.spike_initial = [0 0.3 0.6 -0.3 -0.6];
 s.spike_clone_num = 5;
 spike_clone_num = s.spike_clone_num;
@@ -14,8 +14,7 @@ s.n_bstrap = 1e3; % number of bootstraping for heritability
 s.q = 0.05;
 % when checking the heritability, only use up to the top 50 parent Adults
 s.test_rep_max = 100;
-% check heritability every check_period cycles.
-s.check_period = 100;
+s.HeriSwitch = 1;
 % upper bound for gH_max. for gH_max_Bound = 0.3, set V = 1.
 s.gH_max_Bound = 0.3;
 % the factor for amount of R(0)
@@ -67,7 +66,7 @@ s.K_singular = 1e3;
 
 % R(0)=1 for each V
 s.R0 = s.V;
-s.sl = length(s.spike_initial); % number of spiking fraction to be tested
+s.sl = length(s.spike_initial)-1; % number of spiking fraction to be tested
 
 % structure of an Adult community
 s.comm_struct=struct('M_L',zeros(max_popul,1),'H_L',zeros(max_popul,1),'fp',zeros(max_popul,1),...
@@ -88,9 +87,9 @@ s.const_struct=struct('t_binnum',t_binnum,'max_popul',max_popul,'comm_rep_num',s
     'fp_Bound', s.fp_Bound, 'K_MB_Bound', s.K_MB_Bound,'K_MR_Bound', s.K_MR_Bound, ...
     'K_HR_Bound', s.K_HR_Bound, 'R0', s.R0, 'K_singular', s.K_singular, 'dM', s.dM, 'dH', s.dH, ...
     'c_BM', s.c_BM, 'c_RM', s.c_RM, 'c_RH', s.c_RH, 'mut_rate', s.mut_rate);
-s.H_isolate_struct = struct('gH_max', -ones(spike_clone_num, 1), 'K_HR', -ones(spike_clone_num, 1),...
+s.H_isolates_struct = struct('gH_max', -ones(spike_clone_num, 1), 'K_HR', -ones(spike_clone_num, 1),...
     'H_L', -ones(spike_clone_num, 1));
-s.M_isolate_struct = struct('gM_max', -ones(spike_clone_num, 1), 'K_MR', -ones(spike_clone_num, 1),...
+s.M_isolates_struct = struct('gM_max', -ones(spike_clone_num, 1), 'K_MR', -ones(spike_clone_num, 1),...
                 'M_L', -ones(spike_clone_num, 1), 'fp', -ones(spike_clone_num, 1),...
                 'K_MB', -ones(spike_clone_num, 1));
 save('SixPhenoPara.mat', '-struct', 's')

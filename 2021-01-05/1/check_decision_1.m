@@ -6,8 +6,8 @@ end
 spike_frac = spike_all(1);
 comm_rep_num = N/comm_type_num;
 check_flag = true;
-test_rep_total = sum(rep_num_M(:, end)); % number of Adults under each alternative spiking strategy
-test_rep = min(test_rep_total, test_rep_max); % number of Adults used to estimate heritability
+test_rep_total2 = sum(rep_num_M(:, end)); % number of Adults under each alternative spiking strategy
+test_rep_total1 = min(test_rep_total2, test_rep_max); % number of Adults used to estimate heritability
 sel_counter = 0;
 rep_counter = 0;
 rep_num_M = zeros(N, 1);
@@ -38,9 +38,10 @@ for i = 1 : N
     sel_counter = sel_counter+1;
     rep_counter = rep_counter+rep_num_temp;
 end
+rep_num_M = rep_num_M(1:sel_counter);
 % if more than test_rep Adults are required to check heritability, postpond the
 % check by 10 cycles
-if sel_counter > test_rep
+if sel_counter > test_rep_total1
     check_flag = false;
     heri_par_idx = [];
     rep_num_M = [];

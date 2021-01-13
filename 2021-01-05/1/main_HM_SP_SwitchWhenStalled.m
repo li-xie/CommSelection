@@ -2,7 +2,7 @@ clear
 % dbstop if error
 % number of previous cycles
 C_prev = 0;
-C = 3000; % total number of cycles
+C = 2000; % total number of cycles
 if C_prev == 0
     SixPhenoParaInit
 end
@@ -10,9 +10,12 @@ load('SixPhenoPara')
 %%
 [spike_all, check_cycle_prev, H_isolates_in, M_isolates_in, ...
     newborns, P_sel_dynamics, check_cycle_m]...
-    = SixPhenoSimuInit(0);
+    = SixPhenoSimuInit(C_prev);
 rng('shuffle'); % randomize the random number seed
 n = C_prev+1;
+check_flag = false;
+% spike_frac = spike_all(1);
+% spike_test = spike_all(2 : end);
 % flag_m = zeros(C,2);
 while n <= C
     %     flag_m(n, :) = [n uint8(check_flag)];
@@ -61,14 +64,15 @@ while n <= C
     % in cycle check_cycle-2, parent communities are generated if there are enough cells
     if check_flag == true && abs(n - check_cycle + 2) < 0.1
         sel_counter = size(rep_num_M, 1);
-        test_rep_total = sum(rep_num_M(:, end));
+        test_rep_total2 = sum(rep_num_M(:, end)); % total number of parent comms in check_cycle-2
+        comm_selected = comm_all(I(1:sel_counter));
         % newborns_par is the structure array for parent Newborns
-        newborns_par(1:sl, 1:test_rep_total) = newborn_struct;
+        newborns_par(1:sl, 1:test_rep_total2) = newborn_struct;
         % H isolates that might be used to spike during the next cycle
         H_isolates_out(1, 1:sel_counter) = H_isolates_struct;
         % M isolates that might be used to spike during the next cycle
         M_isolates_out(1, 1:sel_counter) = M_isolates_struct;
-        rseed = randi(2^32-1, sl, test_rep_total, 'uint32');
+        rseed = randi(2^32-1, sl, test_rep_total2, 'uint32');
         comm_par_counter = 0;
         rep_counter = 0;
         for i = 1:sel_counter
@@ -78,7 +82,7 @@ while n <= C
             % heritability when spiking spike_test(2) H biomass, and so on
             % comm_temp is a row structure array with sum(rep_num_M(i, :)) elements
             [comm_temp, H_isolates_out(i), M_isolates_out(i)] = pipette_SpikeMix_SPHM(comm_selected(i), newborn_struct, ...
-                const_struct, [spike_frac spike_test], rep_num_M(i, :), ...
+                const_struct, spike_all, rep_num_M(i, :), ...
                 H_isolates_in(comm_selected(i).parentnum), M_isolates_in(comm_selected(i).parentnum),...
                 spike_clone_num, i);
             newborns(rep_counter+1:rep_counter+rep_num_M(i, 1)) ...
@@ -91,6 +95,7 @@ while n <= C
             end
             comm_par_counter = comm_par_counter+rep_num_M(i,end);
         end
+        P_sel_dynamics(n, 1) = mean([comm_selected.P]);
         % If an Adult doesn't have H to be isolated for spiking for the next cycle, fill the spot with H isolates 
         % from the Adult with the highest P(T). If none of have H to be isolated for spiking, use those H isolates 
         % from the previous cycle.
@@ -98,7 +103,7 @@ while n <= C
         M_isolates_in = M_isolates_out;
         % assign random number seeds to each parent Newborn.
         for i = 1:sl
-            for j = 1:test_rep_total
+            for j = 1:test_rep_total2
                 newborns_par(i,j).rseed = rseed(i,j);
             end
         end
@@ -108,14 +113,14 @@ while n <= C
             = check_decision_1(comm_all, I, spike_all, rep_num_M, N, comm_type_num, BM_target, off_rep_max, test_rep_max);
         if check_flag == true
             heri_par_counter = length(heri_par_idx);
+            test_rep_total1 = min(test_rep_total2, test_rep_max); % number of ordered parent comms decided in cycle check_cycle-1
             sel_counter = size(rep_num_M, 1);
-            check_counter = check_counter+1;
-            check_cycle_m(check_counter) = check_cycle;
+            check_cycle_m = [check_cycle_m; check_cycle];
             save('comm_all/check_cycle_m', 'check_cycle_m')
             H_isolates_out(1, 1:sel_counter) = H_isolates_struct;
             M_isolates_out(1, 1:sel_counter) = M_isolates_struct;
             % newborns_off is the structure array for offspring Newborns
-            newborns_off(1:off_rep_max*(sl+1), 1:test_rep) = newborn_struct;
+            newborns_off(1:off_rep_max*(sl+1), 1:test_rep_total1) = newborn_struct;
             comm_selected = comm_all(I(1:sel_counter));
             % P_par is the array for P(T) of parents
             P_par = zeros(size(newborns_par));
@@ -123,8 +128,8 @@ while n <= C
             M0_par = zeros(size(newborns_par));
             H0_par = zeros(size(newborns_par));
             % adults_par is the structure array for parent Adults
-            adults_par(1:sl, 1:test_rep_total) = comm_struct;
-            parfor i = 1:test_rep_total*sl
+            adults_par(1:sl, 1:test_rep_total2) = comm_struct;
+            parfor i = 1:test_rep_total2*sl
                 adults_par(i) = simu_one_comm(newborns_par(i), comm_struct, const_struct);
                 P_par(i) = adults_par(i).P;
                 M0_par(i) = adults_par(i).M_t(1);
@@ -142,16 +147,16 @@ while n <= C
                 adults_par(i,:) = adults_par(i, I_par);
             end
             % only the top test_rep parent Adults reproduce
-            adults_par = adults_par(:,1:test_rep);
-            rseed = randi(2^32-1,off_rep_max*(sl+1), test_rep, 'uint32');
+            adults_par = adults_par(:,1:test_rep_total1);
+            rseed = randi(2^32-1,off_rep_max*(sl+1), test_rep_total1, 'uint32');
             % reproduce Adults of the current substitution ratio into Newborns for
             % selection and offspring Newborns for checking heritability
             rep_counter = 0;
             for i = 1 : sel_counter
                 [comm_temp, H_isolates_out(i), M_isolates_out(i)] ...
-                    = pipette_SpikeMix_SPHM(comm_all(I(i)), newborn_struct, const_struct, spike_frac, ...
-                    rep_num_M(i), H_isolates_in(comm_all(I(i)).parentnum), ...
-                    M_isolates_in(comm_all(I(i)).parentnum), spike_clone_num, i);
+                    = pipette_SpikeMix_SPHM(comm_selected(i), newborn_struct, const_struct, spike_all(1), ...
+                    rep_num_M(i), H_isolates_in(comm_selected(i).parentnum), ...
+                    M_isolates_in(comm_selected(i).parentnum), spike_clone_num, i);
                 rep_num_temp = rep_num_M(i)-off_rep_max;
                 if rep_num_temp > 0
                     newborns(rep_counter+1:rep_counter+rep_num_temp) ...
@@ -163,13 +168,14 @@ while n <= C
                 end
                 rep_counter = rep_counter+rep_num_temp;
             end
-            for i = sel_counter+1:test_rep
+            P_sel_dynamics(n, 1) = mean([comm_selected.P]);
+            for i = sel_counter+1:test_rep_total1
                 BM = comm_all(I(i)).M_t(end) + comm_all(I(i)).H_t(end);
-                dil_factor = floor(BM/BM_target/(1-abs(spike_frac)));
+                dil_factor = floor(BM/BM_target/(1-abs(spike_all(1))));
                 off_rep_num = min(off_rep_max, dil_factor);
                 if dil_factor > 0
                     [comm_temp, ~, ~] = pipette_SpikeMix_SPHM(comm_all(I(i)), newborn_struct, ...
-                        const_struct, spike_frac, off_rep_num, H_isolates_in(comm_all(I(i)).parentnum),...
+                        const_struct, spike_all(1), off_rep_num, H_isolates_in(comm_all(I(i)).parentnum),...
                         M_isolates_in(comm_all(I(i)).parentnum), spike_clone_num, i);
                     newborns_off(1 : off_rep_num, i) = transpose(comm_temp);
                     heri_par_counter = heri_par_counter+1;
@@ -178,12 +184,12 @@ while n <= C
             end
             % reproduce each parent Adult into up to test_rep_num offspring Newborns
             for i = 1:sl % i is the index for substitution fraction
-                for j = 1:test_rep
+                for j = 1:test_rep_total1
                     BM = adults_par(i,j).M_t(end) + adults_par(i,j).H_t(end);
-                    dil_factor = floor(BM/BM_target/(1-abs(spike_test(i))));
+                    dil_factor = floor(BM/BM_target/(1-abs(spike_all(i+1))));
                     off_rep_num = min(off_rep_max, dil_factor);
                     [comm_temp, ~, ~] = pipette_SpikeMix_SPHM(adults_par(i,j), newborn_struct,...
-                        const_struct, spike_test(i), off_rep_num, H_isolates_in(adults_par(i,j).parentnum),...
+                        const_struct, spike_all(i+1), off_rep_num, H_isolates_in(adults_par(i,j).parentnum),...
                         M_isolates_in(adults_par(i,j).parentnum), spike_clone_num, j);
                     newborns_off(i*off_rep_max+1:i*off_rep_max+off_rep_num, j) ...
                         = transpose(comm_temp);
@@ -191,7 +197,7 @@ while n <= C
             end
             H_isolates_in = H_isolates_out;
             M_isolates_in = M_isolates_out;
-            for i = 1:off_rep_max * (sl+1) * test_rep
+            for i = 1:off_rep_max * (sl+1) * test_rep_total1
                 newborns_off(i).rseed = rseed(i);
             end
             clear newborns_par adults_par
@@ -199,15 +205,12 @@ while n <= C
             check_cycle = -1;
             check_cycle_prev = n;
         end
-    elseif abs(n - check_cycle) < 0.1
-        if check_flag == 0
-            error('n = %d, check_flag=0, inconsistent', n)
-        end
+    elseif check_flag == true && abs(n - check_cycle) < 0.1
         % P_off is the array for P(T) of each offspring Adult
         P_off = zeros(size(newborns_off));
         M0_off = zeros(size(newborns_off));
         H0_off = zeros(size(newborns_off));
-        parfor i=1 : test_rep*off_rep_max*(sl+1)
+        parfor i=1 : test_rep_total1*off_rep_max*(sl+1)
             if sum(newborns_off(i).M_L)+sum(newborns_off(i).H_L) < pcs
                 P_off(i) = NaN;
                 M0_off(i) = 0;
@@ -235,7 +238,7 @@ while n <= C
             P_sorted = sort(P_all, 'descend');
         end
         check_cycle_prev = check_cycle;
-        [spike_all, heri, lb, ub] = switch_decision(spike_all, P_sorted, P_par_sorted, P_off, heri_par_idx, test_rep, ...
+        [spike_all, heri, lb, ub] = switch_decision(spike_all, P_sorted, P_par_sorted, P_off, heri_par_idx, test_rep_total1, ...
             off_rep_max, HeriSwitch, n_bstrap, q);
         check_flag = false;
         save([folder_name1 '/OffResults'],'heri','lb','ub','heri_par_idx','-append')
@@ -252,15 +255,17 @@ while n <= C
         sel_counter = size(rep_num_M, 1);        
         H_isolates_out(1, 1:sel_counter) = H_isolates_struct;
         M_isolates_out(1, 1:sel_counter) = M_isolates_struct;
+        comm_selected = comm_all(I(1:sel_counter));
         for i = 1 : sel_counter
             [newborns(rep_counter+1:rep_counter+rep_num_M(i)), H_isolates_out(i), M_isolates_out(i)]...
-                = pipette_SpikeMix_SPHM(comm_all(I(i)), newborn_struct, ...
-                const_struct, spike_frac, rep_num_M(i), H_isolates_in(comm_all(I(i)).parentnum),...
-                M_isolates_in(comm_all(I(i)).parentnum), spike_clone_num, i);
+                = pipette_SpikeMix_SPHM(comm_selected(i), newborn_struct, ...
+                const_struct, spike_all(1), rep_num_M(i), H_isolates_in(comm_selected(i).parentnum),...
+                M_isolates_in(comm_selected(i).parentnum), spike_clone_num, i);
+            rep_counter = rep_counter + rep_num_M(i);
         end
         H_isolates_in = H_isolates_out(1:sel_counter);
         M_isolates_in = M_isolates_out(1:sel_counter);
-        comm_selected = comm_all(I(1:sel_counter));
+        P_sel_dynamics(n, 1) = mean([comm_selected.P]);
     end
     % assign random number seed to Newborns of the next cycle
     rseed = randi(2^32-1, N, 1, 'uint32');
