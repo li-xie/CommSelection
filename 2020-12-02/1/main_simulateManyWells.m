@@ -1,10 +1,10 @@
 clear
 resultsfolder = 'results/';
-start_cycle = 0;
+start_cycle = 1;
 end_cycle = 1e3;
 num_cycles = end_cycle;
 cycle_duration = 17;
-multiplier = 100;
+multiplier = 10;
 num_wells = 100;
 compressWinner = 1;
 digits_fp = 5; 
